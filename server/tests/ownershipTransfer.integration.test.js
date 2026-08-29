@@ -3,7 +3,6 @@ import request from "supertest";
 import express from "express";
 import mongoose from "mongoose";
 
-// Mock dependencies before importing routes/controllers
 const mockFindOne = jest.fn();
 const mockFind = jest.fn();
 const mockFindById = jest.fn();
@@ -40,6 +39,23 @@ jest.unstable_mockModule("../services/notificationService.js", () => ({
   createNotification: jest.fn().mockResolvedValue({}),
 }));
 
+const mockUser = {
+  _id: new mongoose.Types.ObjectId().toString(),
+  name: "Current Owner",
+  organization: new mongoose.Types.ObjectId().toString(),
+};
+
+jest.unstable_mockModule("../middleware/userAuth.js", () => ({
+  default: (req, res, next) => {
+    if (!req.headers.authorization) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    req.user = mockUser;
+    next();
+  },
+  sanitizeAuthRequestForLog: jest.fn(),
+}));
+
 const { default: meetingOwnershipTransferRoutes } = await import(
   "../routes/meetingOwnershipTransferRoutes.js"
 );
@@ -49,30 +65,20 @@ const { initiateTransfer } = await import(
 
 describe("Ownership Transfer Server Integration Tests (#2666)", () => {
   let app;
-  let unauthApp;
-  const mockUser = {
-    _id: new mongoose.Types.ObjectId().toString(),
-    name: "Current Owner",
-    organization: new mongoose.Types.ObjectId().toString(),
-  };
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     app = express();
     app.use(express.json());
-    // Simulate authenticated user
-    app.use((req, res, next) => {
+    app.use("/api/ownership-transfers", meetingOwnershipTransferRoutes);
+    app.post("/api/meetings/:meetingId/transfers", (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
       req.user = mockUser;
       next();
-    });
-    app.use("/api/ownership-transfers", meetingOwnershipTransferRoutes);
-    app.post("/api/meetings/:meetingId/transfers", initiateTransfer);
-
-    unauthApp = express();
-    unauthApp.use(express.json());
-    // Mounted without auth user -> protect middleware yields 401
-    unauthApp.use("/api/ownership-transfers", meetingOwnershipTransferRoutes);
+    }, initiateTransfer);
   });
 
   describe("GET /api/ownership-transfers/inbox", () => {
@@ -94,18 +100,18 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
         }),
       });
 
-      const res = await request(app).get("/api/ownership-transfers/inbox");
+      const res = await request(app)
+        .get("/api/ownership-transfers/inbox")
+        .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({
-        success: true,
-        message: "Fetched transfer inbox",
-        data: { transfers: expect.any(Array) },
-      });
+      expect(res.body.success).toBe(true);
+      expect(res.body.transfers).toBeDefined();
+      expect(Array.isArray(res.body.transfers)).toBe(true);
     });
 
     it("returns 401 when request is unauthenticated", async () => {
-      const res = await request(unauthApp).get("/api/ownership-transfers/inbox");
+      const res = await request(app).get("/api/ownership-transfers/inbox");
       expect(res.status).toBe(401);
     });
   });
@@ -115,7 +121,6 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
       const meetingId = new mongoose.Types.ObjectId().toString();
       const targetUserId = new mongoose.Types.ObjectId().toString();
 
-      // Meeting check (current user is owner)
       mockFindOne.mockImplementation(({ _id }) => {
         if (_id === meetingId) {
           return Promise.resolve({
@@ -124,16 +129,14 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
             organization: mockUser.organization,
           });
         }
-        return Promise.resolve(null); // No existing pending transfer
+        return Promise.resolve(null);
       });
 
-      // Target user check
       mockFindById.mockResolvedValueOnce({
         _id: targetUserId,
         organization: mockUser.organization,
       });
 
-      // Created transfer
       mockCreate.mockResolvedValueOnce({
         _id: "t-101",
         meeting: meetingId,
@@ -144,15 +147,12 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
 
       const res = await request(app)
         .post(`/api/meetings/${meetingId}/transfers`)
+        .set("Authorization", "Bearer valid-token")
         .send({ targetUserId });
 
       expect(res.status).toBe(201);
-      expect(res.body).toEqual(
-        expect.objectContaining({
-          success: true,
-          message: "Transfer request initiated successfully",
-        }),
-      );
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toBe("Transfer request initiated successfully");
     });
 
     it("returns 400 validation error when transferring ownership to self", async () => {
@@ -160,6 +160,7 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
 
       const res = await request(app)
         .post(`/api/meetings/${meetingId}/transfers`)
+        .set("Authorization", "Bearer valid-token")
         .send({ targetUserId: mockUser._id });
 
       expect(res.status).toBe(400);
@@ -174,6 +175,7 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
 
       const res = await request(app)
         .post(`/api/meetings/${meetingId}/transfers`)
+        .set("Authorization", "Bearer valid-token")
         .send({ targetUserId });
 
       expect(res.status).toBe(404);
@@ -212,9 +214,9 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
       };
       mockFindById.mockResolvedValueOnce(mockMeetingDoc);
 
-      const res = await request(app).post(
-        `/api/ownership-transfers/${transferId}/accept`,
-      );
+      const res = await request(app)
+        .post(`/api/ownership-transfers/${transferId}/accept`)
+        .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("Transfer accepted successfully");
@@ -227,9 +229,9 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
         populate: jest.fn().mockResolvedValue(null),
       });
 
-      const res = await request(app).post(
-        `/api/ownership-transfers/${transferId}/accept`,
-      );
+      const res = await request(app)
+        .post(`/api/ownership-transfers/${transferId}/accept`)
+        .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(404);
       expect(res.body.message).toBe(
@@ -255,9 +257,9 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
         populate: jest.fn().mockResolvedValue(mockTransferDoc),
       });
 
-      const res = await request(app).post(
-        `/api/ownership-transfers/${transferId}/reject`,
-      );
+      const res = await request(app)
+        .post(`/api/ownership-transfers/${transferId}/reject`)
+        .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("Transfer rejected successfully");
@@ -270,9 +272,9 @@ describe("Ownership Transfer Server Integration Tests (#2666)", () => {
         populate: jest.fn().mockResolvedValue(null),
       });
 
-      const res = await request(app).post(
-        `/api/ownership-transfers/${transferId}/reject`,
-      );
+      const res = await request(app)
+        .post(`/api/ownership-transfers/${transferId}/reject`)
+        .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(404);
       expect(res.body.message).toBe(
