@@ -76,7 +76,8 @@ export const getApprovalStatus = async (req, res) => {
 export const submitApproval = async (req, res) => {
   try {
     const { meetingId } = req.params;
-    const { snapshotSummary, approvers } = req.body || {};
+    const snapshotSummary = req.body?.snapshotSummary || req.body?.summary;
+    const approvers = req.body?.approvers || req.body?.approverIds;
 
     if (!mongoose.Types.ObjectId.isValid(String(meetingId))) {
       return res.status(400).json({ error: "Invalid meeting id" });
