@@ -786,7 +786,7 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                       >
                         + Add Annotation
                       </button>
-                    )}
+                    ))}
                   {trimmingClipId === clip._id && (
                     <form
                       onSubmit={(e) => handleTrimClip(e, clip._id)}
