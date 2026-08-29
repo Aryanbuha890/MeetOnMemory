@@ -145,7 +145,7 @@ const MindMapBoard = ({ meetingId, participants }) => {
       setAssigneeId("");
       setDueDate("");
       setPriority("medium");
-    } catch (_err) {
+    } catch {
       toast.error("Failed to convert node to action item");
     }
   };

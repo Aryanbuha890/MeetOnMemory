@@ -473,6 +473,27 @@ export default (io) => {
       socket.to(roomId).emit("breakout:closed", { breakoutRoomId });
     });
 
+    socket.on("breakout:broadcast", ({ roomId, message, sender }) => {
+      const payload = {
+        sender: sender || "Host Notification",
+        message,
+        timestamp: Date.now(),
+        roomId,
+      };
+      io.to(roomId).emit("breakout:broadcast", payload);
+      io.to(`meeting:${roomId}`).emit("breakout_broadcast_received", payload);
+    });
+
+    socket.on("breakout:close-all", ({ roomId }) => {
+      io.to(roomId).emit("breakout:closed-all", { roomId });
+      io.to(`meeting:${roomId}`).emit("breakout_closed_all");
+    });
+
+    socket.on("breakout:shuffled", ({ roomId, allocations }) => {
+      io.to(roomId).emit("breakout:shuffled", { roomId, allocations });
+      io.to(`meeting:${roomId}`).emit("breakout_shuffled", { allocations });
+    });
+
     /**
      * Timer synchronization across all users in a meeting
      * Timer state remains local as it's instance-specific

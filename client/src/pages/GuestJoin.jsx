@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getGuestMeetingData } from "../services/guestAccessApi";
+import {
+  getGuestMeetingData,
+  recordGuestJoin,
+} from "../services/guestAccessApi";
 
 const GuestJoin = () => {
   const { token } = useParams();
@@ -31,8 +34,13 @@ const GuestJoin = () => {
     }
   }, [token]);
 
-  const handleJoin = (e) => {
+  const handleJoin = async (e) => {
     e.preventDefault();
+    try {
+      await recordGuestJoin(token);
+    } catch (err) {
+      console.warn("Could not record guest join metric", err);
+    }
     // Redirect to the actual guest meeting view page
     navigate(`/guest/${token}`);
   };

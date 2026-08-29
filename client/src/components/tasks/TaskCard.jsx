@@ -13,18 +13,21 @@ import {
   Clock,
 } from "lucide-react";
 import { STATUS_STYLES, PRIORITY_STYLES } from "../../utils/taskStyles";
+import SnoozeAlertModal from "./SnoozeAlertModal";
 
 export default function TaskCard({
   task,
   setSelectedTask,
   navigate,
   updateTaskStatus,
+  updateTask,
   toggleTaskReminder,
   selectable = false,
   selected = false,
   onToggleSelect,
   selectionDisabled = false,
 }) {
+  const [showSnoozeModal, setShowSnoozeModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isTogglingReminder, setIsTogglingReminder] = useState(false);
 
@@ -130,6 +133,11 @@ export default function TaskCard({
                 <Clock className="w-3 h-3" /> Due Soon
               </span>
             )}
+            {task.snoozedUntil && new Date(task.snoozedUntil) > new Date() && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800 shrink-0">
+                <Clock className="w-3 h-3" /> Snoozed
+              </span>
+            )}
             {typeof task.importanceScore === "number" && (
               <span
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 shrink-0"
@@ -233,6 +241,23 @@ export default function TaskCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              setShowSnoozeModal(true);
+            }}
+            onKeyDown={handleStopPropagation}
+            title="Configure Snooze & Warning Alert options"
+            aria-label="Configure Snooze and Alert options for this task"
+            className={`p-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 ${
+              task.snoozedUntil && new Date(task.snoozedUntil) > new Date()
+                ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 font-bold"
+                : "bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 border-slate-200 dark:border-slate-700"
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
               navigate(`/meeting/${task.meetingId}`);
             }}
             onKeyDown={handleStopPropagation}
@@ -244,6 +269,14 @@ export default function TaskCard({
           </button>
         </div>
       </div>
+
+      {showSnoozeModal && (
+        <SnoozeAlertModal
+          task={task}
+          onClose={() => setShowSnoozeModal(false)}
+          onSave={updateTask}
+        />
+      )}
     </div>
   );
 }

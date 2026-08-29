@@ -22,4 +22,14 @@ export const keyMomentApi = {
     const response = await apiClient.delete(`/api/key-moments/${id}`);
     return response.data;
   },
+
+  exportMoments: async (meetingId) => {
+    const response = await apiClient.get(
+      `/api/key-moments/export?meetingId=${meetingId}`,
+      { responseType: "blob" },
+    );
+    return response.data;
+  },
 };
+
+export default keyMomentApi;

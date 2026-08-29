@@ -185,6 +185,7 @@ const IntegrationMarketplaceHub = lazy(
   () => import("../pages/IntegrationMarketplaceHub.jsx"),
 );
 const SentimentTrends = lazy(() => import("../pages/SentimentTrends.jsx"));
+const RiskRegister = lazy(() => import("../pages/RiskRegister.jsx"));
 const AsyncMeetingsDashboard = lazy(
   () => import("../pages/AsyncMeetingsDashboard.jsx"),
 );
@@ -194,6 +195,36 @@ const SessionGallery = lazy(() => import("../pages/SessionGallery.jsx"));
 
 const ProtectedRoutes = (
   <React.Fragment>
+    <Route
+      path="/risks"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <RiskRegister />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/risk-register"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <RiskRegister />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/risks/matrix"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <RiskRegister />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
     <Route
       path="/session-cards"
       element={

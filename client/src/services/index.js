@@ -51,3 +51,4 @@ export * from "./meetingROIApi";
 export { default as complianceApi } from "./complianceApi";
 export * from "./aiMeetingNoteApi";
 export * from "./mindMapApi";
+export * from "./agendaRolloverApi";

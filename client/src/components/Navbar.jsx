@@ -565,6 +565,11 @@ const Navbar = () => {
             icon: AlertTriangle,
           },
           {
+            label: t("navbar.riskRegister", "Risk Register"),
+            href: "/risks",
+            icon: ShieldAlert,
+          },
+          {
             label: t("navbar.bookmarks"),
             href: "/bookmarks",
             icon: Bookmark,
