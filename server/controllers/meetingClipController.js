@@ -268,6 +268,15 @@ export const mergeClipsController = async (req, res) => {
       return clipError(res, 400, "Some clips were not found");
     }
 
+    // Validate merge scope: all clips must belong to the same meeting
+    const firstMeetingId = clips[0].meeting.toString();
+    const sameMeeting = clips.every(
+      (c) => c.meeting.toString() === firstMeetingId,
+    );
+    if (!sameMeeting) {
+      return clipError(res, 400, "Cannot merge clips from different meetings");
+    }
+
     // RBAC verification for all clips
     for (const clip of clips) {
       const meeting = await Meeting.findById(clip.meeting);
