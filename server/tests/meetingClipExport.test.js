@@ -1,6 +1,23 @@
+/** @jest-environment node */
+import { jest } from "@jest/globals";
+
+// Mock jsdom virtually to bypass Jest CJS/ESM loader issues with EXODUS bytes
+jest.unstable_mockModule(
+  "jsdom",
+  () => {
+    return {
+      JSDOM: class JSDOM {
+        constructor() {
+          this.window = {};
+        }
+      },
+    };
+  },
+  { virtual: true },
+);
+
 import request from "supertest";
 import mongoose from "mongoose";
-import { jest } from "@jest/globals";
 import path from "path";
 import fs from "fs";
 import User from "../models/userModel.js";
@@ -12,6 +29,7 @@ jest.unstable_mockModule(
   "fluent-ffmpeg",
   () => {
     const mockFfmpegInstance = {
+      input: jest.fn().mockReturnThis(),
       setStartTime: jest.fn().mockReturnThis(),
       setDuration: jest.fn().mockReturnThis(),
       output: jest.fn(function (op) {
@@ -79,6 +97,14 @@ jest.unstable_mockModule(
     };
 
     const mockFfmpegConstructor = jest.fn(() => mockFfmpegInstance);
+    // Add ffprobe static helper
+    mockFfmpegConstructor.ffprobe = jest.fn((sourcePath, callback) => {
+      if (global.__mockFfmpegError) {
+        return callback(new Error(global.__mockFfmpegError));
+      }
+      callback(null, { format: { duration: 100 } });
+    });
+
     return {
       default: mockFfmpegConstructor,
     };
@@ -90,10 +116,10 @@ const { app } = await import("../server.js");
 const { createClerkTestToken, authHeader } =
   await import("./helpers/clerkTestAuth.js");
 
-let testUser, otherOrgUser;
-let userToken, otherUserToken;
+let testUser, otherOrgUser, viewerUser;
+let userToken, otherUserToken, viewerToken;
 let meeting;
-let clip1, clip2, otherClip;
+let clip1, clip2;
 
 const orgId = new mongoose.Types.ObjectId().toString();
 const otherOrgId = new mongoose.Types.ObjectId().toString();
@@ -123,6 +149,16 @@ beforeEach(async () => {
     clerkUserId: `clerk_clip_other_${Date.now()}`,
   });
 
+  // Role: guest (lacks meetings:edit permission)
+  viewerUser = await User.create({
+    name: "Clip Viewer",
+    email: `clip-export-viewer-${Date.now()}@example.com`,
+    password: "Password123!",
+    role: "guest",
+    organization: orgId,
+    clerkUserId: `clerk_clip_viewer_${Date.now()}`,
+  });
+
   userToken = createClerkTestToken({
     clerkUserId: testUser.clerkUserId,
     email: testUser.email,
@@ -131,6 +167,11 @@ beforeEach(async () => {
   otherUserToken = createClerkTestToken({
     clerkUserId: otherOrgUser.clerkUserId,
     email: otherOrgUser.email,
+  });
+
+  viewerToken = createClerkTestToken({
+    clerkUserId: viewerUser.clerkUserId,
+    email: viewerUser.email,
   });
 
   meeting = await Meeting.create({
@@ -157,21 +198,6 @@ beforeEach(async () => {
     startTime: 40,
     endTime: 60,
     fileUrl: "uploads/clips/trimmed_clip2.mp4",
-  });
-
-  const otherMeeting = await Meeting.create({
-    title: "Clip Test Other Org",
-    uploadedBy: otherOrgUser._id,
-    organization: otherOrgId,
-    date: new Date(),
-  });
-
-  otherClip = await MeetingClip.create({
-    meeting: otherMeeting._id,
-    createdBy: otherOrgUser._id,
-    title: "Other Clip",
-    startTime: 5,
-    endTime: 15,
   });
 
   // Create physical mock files
@@ -268,7 +294,63 @@ describe("Meeting Clip Trimming & Merging Pipeline API (#2588)", () => {
         endTime: 28,
       });
 
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("should block user with viewer role (lacks meetings:edit) from trimming clips", async () => {
+    const res = await request(app)
+      .post(`/api/clips/${clip1._id}/trim`)
+      .set(authHeader(viewerToken))
+      .send({
+        startTime: 12,
+        endTime: 28,
+      });
+
     expect(res.statusCode).toBe(403);
+    expect(res.body.message).toContain("permission to edit meetings");
+  });
+
+  it("should reject invalid trim boundaries before FFmpeg processing", async () => {
+    // 1. Non-finite values
+    let res = await request(app)
+      .post(`/api/clips/${clip1._id}/trim`)
+      .set(authHeader(userToken))
+      .send({
+        startTime: "abc",
+        endTime: 20,
+      });
+    expect(res.statusCode).toBe(500);
+
+    // 2. Negative start
+    res = await request(app)
+      .post(`/api/clips/${clip1._id}/trim`)
+      .set(authHeader(userToken))
+      .send({
+        startTime: -5,
+        endTime: 20,
+      });
+    expect(res.statusCode).toBe(500);
+
+    // 3. start >= end
+    res = await request(app)
+      .post(`/api/clips/${clip1._id}/trim`)
+      .set(authHeader(userToken))
+      .send({
+        startTime: 20,
+        endTime: 15,
+      });
+    expect(res.statusCode).toBe(500);
+
+    // 4. Exceeds actual duration (mock ffprobe returns 100)
+    res = await request(app)
+      .post(`/api/clips/${clip1._id}/trim`)
+      .set(authHeader(userToken))
+      .send({
+        startTime: 10,
+        endTime: 150,
+      });
+    expect(res.statusCode).toBe(500);
+    expect(res.body.error).toContain("exceeds source duration");
   });
 
   it("should merge multiple clips and save compilation metadata", async () => {
@@ -296,6 +378,44 @@ describe("Meeting Clip Trimming & Merging Pipeline API (#2588)", () => {
     fs.unlinkSync(outputPath); // cleanup
   });
 
+  it("should preserve the requested clip ordering in the merged compilation", async () => {
+    // 1. Order 1: [clip1, clip2]
+    let res = await request(app)
+      .post("/api/clips/merge")
+      .set(authHeader(userToken))
+      .send({
+        clipIds: [clip1._id.toString(), clip2._id.toString()],
+        title: "Order One Compilation",
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.mergedClips[0]).toBe(clip1._id.toString());
+    expect(res.body.data.mergedClips[1]).toBe(clip2._id.toString());
+
+    // cleanup file
+    let outputFilename = `merged_${res.body.data._id}.mp4`;
+    let outputPath = path.resolve("uploads/clips", outputFilename);
+    if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+
+    // 2. Order 2: [clip2, clip1]
+    res = await request(app)
+      .post("/api/clips/merge")
+      .set(authHeader(userToken))
+      .send({
+        clipIds: [clip2._id.toString(), clip1._id.toString()],
+        title: "Order Two Compilation",
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.mergedClips[0]).toBe(clip2._id.toString());
+    expect(res.body.data.mergedClips[1]).toBe(clip1._id.toString());
+
+    // cleanup file
+    outputFilename = `merged_${res.body.data._id}.mp4`;
+    outputPath = path.resolve("uploads/clips", outputFilename);
+    if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+  });
+
   it("should prevent orphaned compilation records if merge fails", async () => {
     global.__mockFfmpegError = "FFmpeg merge error";
 
@@ -317,12 +437,25 @@ describe("Meeting Clip Trimming & Merging Pipeline API (#2588)", () => {
     expect(compilationCount).toBe(0);
   });
 
+  it("should block user with viewer role from merging clips", async () => {
+    const res = await request(app)
+      .post("/api/clips/merge")
+      .set(authHeader(viewerToken))
+      .send({
+        clipIds: [clip1._id.toString(), clip2._id.toString()],
+        title: "Viewer Merged Compilation",
+      });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.message).toContain("permission to edit meetings");
+  });
+
   it("should fail to merge clips from other organizations (cross-tenant safety)", async () => {
     const res = await request(app)
       .post("/api/clips/merge")
-      .set(authHeader(userToken))
+      .set(authHeader(otherUserToken))
       .send({
-        clipIds: [clip1._id.toString(), otherClip._id.toString()],
+        clipIds: [clip1._id.toString(), clip2._id.toString()],
         title: "Unsafe Compilation",
       });
 
@@ -330,7 +463,6 @@ describe("Meeting Clip Trimming & Merging Pipeline API (#2588)", () => {
   });
 
   it("should fail to merge clips belonging to different meetings", async () => {
-    // Create another clip under otherMeeting but belonging to the organizer's organization (same tenant, different meeting)
     const otherMeetingSameOrg = await Meeting.create({
       title: "Different Meeting Same Tenant",
       uploadedBy: testUser._id,
@@ -356,5 +488,26 @@ describe("Meeting Clip Trimming & Merging Pipeline API (#2588)", () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body.error).toContain("different meetings");
+  });
+
+  it("should fail merge if any clip timing metadata is invalid", async () => {
+    // Create a clip with invalid bounds directly in database
+    const badClip = await MeetingClip.create({
+      meeting: meeting._id,
+      createdBy: testUser._id,
+      title: "Bad Clip",
+      startTime: 50,
+      endTime: 40, // invalid range
+    });
+
+    const res = await request(app)
+      .post("/api/clips/merge")
+      .set(authHeader(userToken))
+      .send({
+        clipIds: [clip1._id.toString(), badClip._id.toString()],
+        title: "Bad Timing Merge",
+      });
+
+    expect(res.statusCode).toBe(500);
   });
 });

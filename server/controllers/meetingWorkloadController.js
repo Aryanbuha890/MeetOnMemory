@@ -1,5 +1,30 @@
 import MeetingWorkloadService from "../services/meetingWorkloadService.js";
-import { hasOrgPermission, PERMISSIONS } from "../utils/rbacPermissions.js";
+import User from "../models/userModel.js";
+import { hasPermission } from "../utils/rbacPermissions.js";
+
+const PERMISSIONS = {
+  VIEW_ORGANIZATION_ANALYTICS: "view_organization_analytics",
+  MANAGE_USERS: "manage_users",
+};
+
+const hasOrgPermission = async (userId, organizationId, permission) => {
+  const user = await User.findById(userId);
+  if (!user) return false;
+  if (String(user.organization) !== String(organizationId)) return false;
+
+  if (user.role === "owner" || user.role === "admin") return true;
+
+  if (permission === "VIEW_ORGANIZATION_ANALYTICS") {
+    return hasPermission(user.role, "analytics", "view");
+  }
+  if (permission === "MANAGE_USERS") {
+    return (
+      hasPermission(user.role, "team_members", "invite") ||
+      hasPermission(user.role, "team_members", "remove")
+    );
+  }
+  return false;
+};
 
 export const getHeatmap = async (req, res) => {
   try {

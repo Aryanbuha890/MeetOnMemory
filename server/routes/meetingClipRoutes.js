@@ -4,7 +4,7 @@ import {
   mergeClipsController,
 } from "../controllers/meetingClipController.js";
 import userAuth from "../middleware/userAuth.js";
-import { requireOrgMembership } from "../middleware/rbac.js";
+import { requireOrgMembership, requirePermission } from "../middleware/rbac.js";
 
 const router = express.Router();
 
@@ -12,7 +12,15 @@ const router = express.Router();
 router.use(userAuth);
 router.use(requireOrgMembership);
 
-router.post("/:clipId/trim", trimClipController);
-router.post("/merge", mergeClipsController);
+router.post(
+  "/:clipId/trim",
+  requirePermission("meetings", "edit"),
+  trimClipController,
+);
+router.post(
+  "/merge",
+  requirePermission("meetings", "edit"),
+  mergeClipsController,
+);
 
 export default router;
