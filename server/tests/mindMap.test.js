@@ -103,4 +103,83 @@ describe("Collaborative Live Mind Map & Brainstorming Board Sync Engine (#2592)"
     expect(actionItem).toBeDefined();
     expect(actionItem.priority).toBe("high");
   });
+
+  it("should deny access to GET /api/mindmap/:meetingId for an unauthorized user", async () => {
+    const unauthUser = await User.create({
+      name: "Unauthorized User",
+      email: `mindmap-unauth-${Date.now()}@example.com`,
+      password: "Password123!",
+      role: "member",
+      organization: new mongoose.Types.ObjectId().toString(),
+      clerkUserId: `clerk_mm_unauth_${Date.now()}`,
+    });
+
+    const unauthToken = createClerkTestToken({
+      clerkUserId: unauthUser.clerkUserId,
+      email: unauthUser.email,
+    });
+
+    const res = await request(app)
+      .get(`/api/mindmap/${testMeeting._id}`)
+      .set(authHeader(unauthToken));
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("should deny access to POST /api/mindmap/:meetingId for an unauthorized user", async () => {
+    const unauthUser = await User.create({
+      name: "Unauthorized User",
+      email: `mindmap-unauth-${Date.now()}@example.com`,
+      password: "Password123!",
+      role: "member",
+      organization: new mongoose.Types.ObjectId().toString(),
+      clerkUserId: `clerk_mm_unauth_${Date.now()}`,
+    });
+
+    const unauthToken = createClerkTestToken({
+      clerkUserId: unauthUser.clerkUserId,
+      email: unauthUser.email,
+    });
+
+    const res = await request(app)
+      .post(`/api/mindmap/${testMeeting._id}`)
+      .set(authHeader(unauthToken))
+      .send({ nodes: [], connections: [] });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("should fail to convert a node to an ActionItem if assignee is unauthorized", async () => {
+    const nodes = [
+      { id: "node-1", text: "Implement OAuth2 Flow", x: 100, y: 150 },
+    ];
+    await MindMap.create({
+      meetingId: testMeeting._id,
+      nodes,
+      connections: [],
+    });
+
+    const unauthUser = await User.create({
+      name: "Unauthorized User",
+      email: `mindmap-unauth-${Date.now()}@example.com`,
+      password: "Password123!",
+      role: "member",
+      organization: new mongoose.Types.ObjectId().toString(),
+      clerkUserId: `clerk_mm_unauth_${Date.now()}`,
+    });
+
+    const res = await request(app)
+      .post(`/api/mindmap/${testMeeting._id}/convert-node`)
+      .set(authHeader(userToken))
+      .send({
+        nodeId: "node-1",
+        assignee: unauthUser._id.toString(),
+      });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain("Assignee is not a valid participant");
+  });
 });

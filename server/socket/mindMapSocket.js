@@ -1,6 +1,54 @@
 import MindMap from "../models/mindMapModel.js";
 import { resolveMeetingSocketAccess } from "../utils/meetingSocketAccess.js";
 
+const validateMindMapPayload = (nodes, connections) => {
+  if (!Array.isArray(nodes) || !Array.isArray(connections)) {
+    return false;
+  }
+
+  if (nodes.length > 500 || connections.length > 500) {
+    return false;
+  }
+
+  for (const node of nodes) {
+    if (!node || typeof node.id !== "string" || !node.id.trim()) {
+      return false;
+    }
+    if (
+      node.text !== undefined &&
+      (typeof node.text !== "string" || node.text.length > 1000)
+    ) {
+      return false;
+    }
+    if (node.x !== undefined && typeof node.x !== "number") {
+      return false;
+    }
+    if (node.y !== undefined && typeof node.y !== "number") {
+      return false;
+    }
+    if (
+      node.color !== undefined &&
+      (typeof node.color !== "string" || node.color.length > 50)
+    ) {
+      return false;
+    }
+  }
+
+  for (const conn of connections) {
+    if (!conn || typeof conn.id !== "string" || !conn.id.trim()) {
+      return false;
+    }
+    if (typeof conn.source !== "string" || !conn.source.trim()) {
+      return false;
+    }
+    if (typeof conn.target !== "string" || !conn.target.trim()) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 export default (io) => {
   io.on("connection", (socket) => {
     socket.on("mindmap:join", async ({ meetingId }) => {
@@ -42,6 +90,14 @@ export default (io) => {
           const access = await resolveMeetingSocketAccess(meetingId, socket);
           if (!access.authorized) return;
 
+          // Validate payload size and types
+          if (!validateMindMapPayload(nodes, connections)) {
+            socket.emit("mindmap:error", {
+              message: "Invalid mind map payload structure or size limit exceeded",
+            });
+            return;
+          }
+
           // Persist to DB
           await MindMap.findOneAndUpdate(
             { meetingId },
@@ -60,6 +116,13 @@ export default (io) => {
     socket.on("mindmap:node-drag", async ({ meetingId, nodeId, x, y }) => {
       try {
         if (!meetingId || !nodeId) return;
+        if (
+          typeof nodeId !== "string" ||
+          typeof x !== "number" ||
+          typeof y !== "number"
+        ) {
+          return;
+        }
 
         const access = await resolveMeetingSocketAccess(meetingId, socket);
         if (!access.authorized) return;
