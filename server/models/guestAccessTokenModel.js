@@ -19,6 +19,13 @@ const guestAccessTokenSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    token: {
+      type: String,
+    },
+    label: {
+      type: String,
+      default: "",
+    },
     permissions: [
       {
         type: String,
@@ -43,6 +50,18 @@ const guestAccessTokenSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    viewCount: {
+      type: Number,
+      default: 0,
+    },
+    joinCount: {
+      type: Number,
+      default: 0,
+    },
+    lastUsedAt: {
+      type: Date,
+      default: null,
+    },
     revoked: {
       type: Boolean,
       default: false,
@@ -58,4 +77,8 @@ const guestAccessTokenSchema = new mongoose.Schema(
   },
 );
 
-export default mongoose.model("GuestAccessToken", guestAccessTokenSchema);
+const GuestAccessToken = mongoose.model(
+  "GuestAccessToken",
+  guestAccessTokenSchema,
+);
+export default GuestAccessToken;

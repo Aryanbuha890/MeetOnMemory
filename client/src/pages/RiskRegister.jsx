@@ -44,12 +44,16 @@ const RiskRegister = () => {
   const isAdminOrOwner =
     userData?.role === "admin" || userData?.role === "owner";
 
+  const effectiveOrgId =
+    orgId ||
+    userData?.currentOrganization?._id ||
+    userData?.currentOrganization ||
+    userData?.organization;
+
   useEffect(() => {
-    if (orgId) {
-      fetchDashboardData();
-      fetchMembers();
-    }
-  }, [orgId]);
+    fetchDashboardData();
+    fetchMembers();
+  }, [effectiveOrgId]);
 
   const fetchDashboardData = async () => {
     try {
@@ -157,9 +161,11 @@ const RiskRegister = () => {
   };
 
   const filteredRisks = risks.filter((risk) => {
+    const riskName = risk.title || risk.riskTitle || "";
+    const riskDesc = risk.description || "";
     const matchesSearch =
-      risk.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      risk.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      riskName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      riskDesc.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
       filterCategory === "All" || risk.category === filterCategory;
     const matchesCell = selectedCell
@@ -464,7 +470,9 @@ const RiskRegister = () => {
                             >
                               <td className="p-4">
                                 <div className="font-medium text-slate-200 truncate max-w-[200px] xl:max-w-[300px]">
-                                  {risk.title}
+                                  {risk.title ||
+                                    risk.riskTitle ||
+                                    "Untitled Risk"}
                                 </div>
                                 <div className="text-xs text-slate-500 truncate max-w-[200px] xl:max-w-[300px] mt-1 flex items-center gap-1">
                                   {risk.meetingId?.title || "Unknown Meeting"}
@@ -493,12 +501,16 @@ const RiskRegister = () => {
                               <td className="p-4">
                                 <div className="flex items-center gap-2">
                                   <span
-                                    className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${getRiskColor(risk.riskScore)}`}
+                                    className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${getRiskColor(risk.riskScore ?? risk.probability * risk.impact)}`}
                                   >
-                                    {risk.riskScore}
+                                    {risk.riskScore ??
+                                      risk.probability * risk.impact}
                                   </span>
                                   <span className="text-xs font-medium text-slate-400">
-                                    {getRiskLevel(risk.riskScore)}
+                                    {getRiskLevel(
+                                      risk.riskScore ??
+                                        risk.probability * risk.impact,
+                                    )}
                                   </span>
                                 </div>
                               </td>

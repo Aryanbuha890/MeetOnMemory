@@ -4,7 +4,7 @@ export const resourceBookingApi = {
   // Fetch all physical resources for an organization
   getPhysicalResources: async (organizationId) => {
     const response = await api.get(
-      `/physical-resources/organization/${organizationId}`,
+      `/api/physical-resources/organization/${organizationId}`,
     );
     return response.data;
   },
@@ -12,9 +12,15 @@ export const resourceBookingApi = {
   // Create a new physical resource
   createPhysicalResource: async (organizationId, resourceData) => {
     const response = await api.post(
-      `/physical-resources/organization/${organizationId}`,
+      `/api/physical-resources/organization/${organizationId}`,
       resourceData,
     );
+    return response.data;
+  },
+
+  // Delete a physical resource
+  deletePhysicalResource: async (resourceId) => {
+    const response = await api.delete(`/api/physical-resources/${resourceId}`);
     return response.data;
   },
 
@@ -25,31 +31,51 @@ export const resourceBookingApi = {
     endTime,
     type = null,
   ) => {
+    const startIso =
+      startTime instanceof Date ? startTime.toISOString() : startTime;
+    const endIso = endTime instanceof Date ? endTime.toISOString() : endTime;
+
     const params = new URLSearchParams({
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
+      startTime: startIso,
+      endTime: endIso,
     });
     if (type) params.append("type", type);
 
     const response = await api.get(
-      `/physical-resources/organization/${organizationId}/available?${params.toString()}`,
+      `/api/physical-resources/organization/${organizationId}/available?${params.toString()}`,
     );
     return response.data;
   },
 
-  // Book a resource
+  // Get all active bookings for a specific resource
+  getResourceBookings: async (resourceId) => {
+    const response = await api.get(
+      `/api/physical-resources/resource/${resourceId}/bookings`,
+    );
+    return response.data;
+  },
+
+  // Get all bookings for an organization
+  getOrganizationBookings: async (organizationId) => {
+    const response = await api.get(
+      `/api/physical-resources/organization/${organizationId}/bookings`,
+    );
+    return response.data;
+  },
+
+  // Book a resource (handles 409 conflict responses in caller)
   createBooking: async (organizationId, bookingData) => {
-    const response = await api.post(
-      `/physical-resources/organization/${organizationId}/bookings`,
-      bookingData,
-    );
+    const targetUrl = organizationId
+      ? `/api/physical-resources/organization/${organizationId}/bookings`
+      : `/api/physical-resources/bookings/create`;
+    const response = await api.post(targetUrl, bookingData);
     return response.data;
   },
 
-  // Cancel a booking
+  // Cancel / revoke a booking
   cancelBooking: async (bookingId) => {
     const response = await api.delete(
-      `/physical-resources/bookings/${bookingId}`,
+      `/api/physical-resources/bookings/${bookingId}`,
     );
     return response.data;
   },
@@ -57,7 +83,7 @@ export const resourceBookingApi = {
   // Get bookings for a specific meeting
   getMeetingBookings: async (meetingId) => {
     const response = await api.get(
-      `/physical-resources/meetings/${meetingId}/bookings`,
+      `/api/physical-resources/meetings/${meetingId}/bookings`,
     );
     return response.data;
   },

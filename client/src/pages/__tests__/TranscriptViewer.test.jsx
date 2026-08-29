@@ -53,6 +53,10 @@ const mockNavigate = vi.fn();
 vi.mock("react-router-dom", () => ({
   useParams: () => ({ meetingId: "meeting-789" }),
   useNavigate: () => mockNavigate,
+  useLocation: () => ({
+    search: "",
+    pathname: "/meetings/meeting-789/transcript",
+  }),
 }));
 
 describe("TranscriptViewer Page (#1805)", () => {

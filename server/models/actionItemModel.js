@@ -251,6 +251,18 @@ const actionItemSchema = new mongoose.Schema(
     archivedAt: { type: Date, default: null },
     expiresAt: { type: Date, default: null },
     lifecycleHistory: { type: [lifecycleTransitionSchema], default: [] },
+    snoozedUntil: {
+      type: Date,
+      default: null,
+    },
+    customWarningOffsets: {
+      type: [Number],
+      default: [],
+    },
+    warningsSent: {
+      type: [Number],
+      default: [],
+    },
   },
   {
     timestamps: true,

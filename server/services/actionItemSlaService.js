@@ -85,6 +85,78 @@ class ActionItemSlaService {
     for (const item of actionItems) {
       const targets = config.targets[item.priority] || config.targets.medium;
 
+      // Skip active alerting if snoozed
+      if (item.snoozedUntil && now < item.snoozedUntil) {
+        continue;
+      }
+
+      const isResolved = ["resolved", "completed"].includes(item.status);
+
+      // Check custom warning offsets before breach
+      if (item.customWarningOffsets && item.customWarningOffsets.length > 0) {
+        const responseBreachTime = new Date(
+          item.createdAt.getTime() +
+            targets.targetResponseHours * 60 * 60 * 1000,
+        );
+        const resolutionBreachTime = new Date(
+          item.createdAt.getTime() +
+            targets.targetResolutionHours * 60 * 60 * 1000,
+        );
+
+        for (const offset of item.customWarningOffsets) {
+          const warningTimeResponse = new Date(
+            responseBreachTime.getTime() - offset * 60 * 1000,
+          );
+          const warningTimeResolution = new Date(
+            resolutionBreachTime.getTime() - offset * 60 * 1000,
+          );
+
+          // Response Warning
+          if (
+            item.status === "open" &&
+            now >= warningTimeResponse &&
+            now < responseBreachTime &&
+            !item.warningsSent.includes(offset)
+          ) {
+            if (item.assignee) {
+              await createNotification(
+                item.assignee,
+                "SLA Response Warning Alert",
+                `The task "${item.text}" is approaching its Response SLA limit (${targets.targetResponseHours}h).`,
+                "tasks",
+                `/followup/tasks/${item._id}`,
+                "View Task",
+                { actionItemId: item._id },
+              );
+            }
+            item.warningsSent.push(offset);
+            await item.save();
+          }
+
+          // Resolution Warning
+          if (
+            !isResolved &&
+            now >= warningTimeResolution &&
+            now < resolutionBreachTime &&
+            !item.warningsSent.includes(offset)
+          ) {
+            if (item.assignee) {
+              await createNotification(
+                item.assignee,
+                "SLA Resolution Warning Alert",
+                `The task "${item.text}" is approaching its Resolution SLA limit (${targets.targetResolutionHours}h).`,
+                "tasks",
+                `/followup/tasks/${item._id}`,
+                "View Task",
+                { actionItemId: item._id },
+              );
+            }
+            item.warningsSent.push(offset);
+            await item.save();
+          }
+        }
+      }
+
       // Calculate actual hours since creation
       const hoursSinceCreation = (now - item.createdAt) / (1000 * 60 * 60);
 
@@ -104,7 +176,6 @@ class ActionItemSlaService {
       }
 
       // 2. Check Resolution SLA (Time to move to 'resolved' or 'completed')
-      const isResolved = ["resolved", "completed"].includes(item.status);
       let resolutionHours = hoursSinceCreation;
       if (isResolved && item.resolvedAt) {
         resolutionHours = (item.resolvedAt - item.createdAt) / (1000 * 60 * 60);

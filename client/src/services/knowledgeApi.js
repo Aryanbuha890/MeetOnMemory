@@ -20,6 +20,8 @@ export const knowledgeApi = {
   },
   updateActionItemStatus: (id, status) =>
     apiClient.patch(`/api/knowledge/action-items/${id}`, { status }),
+  updateActionItem: (id, updates) =>
+    apiClient.patch(`/api/action-items/${id}`, updates),
   toggleActionItemReminder: (id, enabled) =>
     apiClient.patch(`/api/knowledge/action-items/${id}/reminders`, { enabled }),
   getDecisions: (sortBy = "createdAt", status, options = {}) => {

@@ -22,6 +22,7 @@ const IssueTrackerConfig = ({ provider, title, description, icon }) => {
   const [projectInput, setProjectInput] = useState("");
   const [showLogs, setShowLogs] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [fieldMappings, setFieldMappings] = useState({
     syncAssignee: true,
@@ -165,6 +166,22 @@ const IssueTrackerConfig = ({ provider, title, description, icon }) => {
       console.error(error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSyncNow = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await apiClient.post(`/api/issue-tracker/${provider}/sync`);
+      if (res.data?.data) {
+        setSyncStatusData(res.data.data);
+      }
+      toast.success(res.data?.message || "Sync completed successfully");
+    } catch (error) {
+      console.error(`Error syncing ${provider}:`, error);
+      toast.error(error.response?.data?.error || `Failed to sync ${title}`);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -411,14 +428,29 @@ const IssueTrackerConfig = ({ provider, title, description, icon }) => {
             </button>
 
             {isConnected && (
-              <button
-                type="button"
-                onClick={fetchConfig}
-                className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                title="Refresh Status"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Refresh Status
-              </button>
+              <>
+                <button
+                  type="button"
+                  data-testid="sync-now-button"
+                  onClick={handleSyncNow}
+                  disabled={isSyncing}
+                  className="px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`}
+                  />
+                  {isSyncing ? "Syncing..." : "Sync Now"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={fetchConfig}
+                  className="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                  title="Refresh Status"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Refresh Status
+                </button>
+              </>
             )}
           </div>
         </form>
@@ -427,6 +459,19 @@ const IssueTrackerConfig = ({ provider, title, description, icon }) => {
       {/* Sync Status Panel & Metrics */}
       {isConnected && (
         <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 space-y-4">
+          {syncStatusData.lastSyncError && (
+            <div
+              data-testid="sync-error-banner"
+              className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2 text-xs text-red-800 dark:text-red-200"
+            >
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block">Last Sync Error</span>
+                <span>{syncStatusData.lastSyncError}</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div>
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-0.5">

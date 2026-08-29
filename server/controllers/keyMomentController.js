@@ -6,20 +6,24 @@ import { getKeyMomentsRoom } from "../socket/keyMomentSocket.js";
 
 const keyMomentSchema = z.object({
   meetingId: z.string().min(1, "Meeting ID is required"),
-  snippet: z.string().min(1).max(500),
-  startTime: z.number().min(0),
-  endTime: z.number().min(0),
-  category: z.enum([
-    "decision",
-    "action_item",
-    "insight",
-    "question",
-    "disagreement",
-  ]),
+  snippet: z.string().min(1).max(500).optional(),
+  title: z.string().min(1).max(500).optional(),
+  startTime: z.number().min(0).optional(),
+  endTime: z.number().min(0).optional(),
+  timestamp: z.number().min(0).optional(),
+  category: z
+    .enum(["decision", "action_item", "insight", "question", "disagreement"])
+    .optional()
+    .default("insight"),
   note: z.string().optional().default(""),
 });
 
 const updateKeyMomentSchema = z.object({
+  snippet: z.string().min(1).max(500).optional(),
+  title: z.string().min(1).max(500).optional(),
+  startTime: z.number().min(0).optional(),
+  endTime: z.number().min(0).optional(),
+  timestamp: z.number().min(0).optional(),
   category: z
     .enum(["decision", "action_item", "insight", "question", "disagreement"])
     .optional(),
@@ -31,36 +35,73 @@ const updateKeyMomentSchema = z.object({
 // @access  Private
 export const createKeyMoment = async (req, res) => {
   try {
-    const validatedData = keyMomentSchema.parse(req.body);
+    const rawData = req.body || {};
+    const parsedData = keyMomentSchema.parse(rawData);
     const userId = req.user._id;
-    const meeting = await Meeting.findById(validatedData.meetingId);
+    const meetingId = parsedData.meetingId;
+
+    if (!mongoose.isValidObjectId(meetingId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid meeting ID" });
+    }
+
+    const meeting = await Meeting.findById(meetingId);
     if (!meeting) {
       return res
         .status(404)
         .json({ success: false, message: "Meeting not found" });
     }
 
-    const isOwner = meeting.uploadedBy.toString() === userId.toString();
+    const isOwner = meeting.uploadedBy?.toString() === userId.toString();
     const isParticipant = meeting.participants?.some(
       (p) => p.user?.toString() === userId.toString(),
     );
-    if (!isOwner && !isParticipant) {
+    const isOrgMember =
+      req.user.organization &&
+      meeting.organization &&
+      req.user.organization.toString() === meeting.organization.toString();
+
+    if (!isOwner && !isParticipant && !isOrgMember) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to create key moments for this meeting",
       });
     }
 
-    if (validatedData.endTime < validatedData.startTime) {
+    const snippet = parsedData.snippet || parsedData.title;
+    if (!snippet) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Snippet or title is required" });
+    }
+
+    const startTime =
+      parsedData.startTime !== undefined
+        ? parsedData.startTime
+        : parsedData.timestamp !== undefined
+          ? parsedData.timestamp
+          : 0;
+
+    const endTime =
+      parsedData.endTime !== undefined ? parsedData.endTime : startTime + 10;
+
+    if (endTime < startTime) {
       return res.status(400).json({
         success: false,
         message: "End time cannot be before start time",
       });
     }
+
     const newMoment = await KeyMoment.create({
-      ...validatedData,
+      meetingId,
       userId,
       organization: meeting.organization || req.user.organization,
+      snippet,
+      startTime,
+      endTime,
+      category: parsedData.category || "insight",
+      note: parsedData.note || "",
     });
 
     const populatedMoment = await KeyMoment.findById(newMoment._id).populate(
@@ -68,13 +109,14 @@ export const createKeyMoment = async (req, res) => {
       "name email profilePicture",
     );
 
-    const io = req.app.get("io");
+    const io = req.app?.get("io");
     if (io) {
-      io.to(getKeyMomentsRoom(validatedData.meetingId)).emit(
+      io.to(getKeyMomentsRoom(meetingId.toString())).emit(
         "keyMoment:created",
         populatedMoment,
       );
     }
+
     res.status(201).json({ success: true, keyMoment: populatedMoment });
   } catch (error) {
     if (error.code === 11000) {
@@ -117,11 +159,16 @@ export const getKeyMomentsForMeeting = async (req, res) => {
         .json({ success: false, message: "Meeting not found" });
     }
 
-    const isOwner = meeting.uploadedBy.toString() === userId.toString();
+    const isOwner = meeting.uploadedBy?.toString() === userId.toString();
     const isParticipant = meeting.participants?.some(
       (p) => p.user?.toString() === userId.toString(),
     );
-    if (!isOwner && !isParticipant) {
+    const isOrgMember =
+      req.user.organization &&
+      meeting.organization &&
+      req.user.organization.toString() === meeting.organization.toString();
+
+    if (!isOwner && !isParticipant && !isOrgMember) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to view key moments for this meeting",
@@ -140,8 +187,8 @@ export const getKeyMomentsForMeeting = async (req, res) => {
   }
 };
 
-// @desc    Update a key moment (note or category)
-// @route   PATCH /api/key-moments/:id
+// @desc    Update a key moment (snippet, title, timestamp, note, or category)
+// @route   PATCH /api/key-moments/:id or PUT /api/key-moments/:id
 // @access  Private
 export const updateKeyMoment = async (req, res) => {
   try {
@@ -160,10 +207,63 @@ export const updateKeyMoment = async (req, res) => {
         .json({ success: false, message: "Key moment not found" });
     }
 
-    if (moment.userId.toString() !== req.user._id.toString()) {
+    const isCreator =
+      moment.userId?.toString() === req.user?._id?.toString() ||
+      moment.userId?.toString() === req.user?.id?.toString();
+
+    let isMeetingOwner = false;
+    if (moment.meetingId) {
+      const meeting = await Meeting.findById(moment.meetingId);
+      if (meeting) {
+        isMeetingOwner =
+          meeting.uploadedBy?.toString() === req.user?._id?.toString();
+      }
+    }
+    const isAdmin = req.user?.role === "admin" || req.user?.role === "owner";
+
+    if (!isCreator && !isMeetingOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to update this key moment",
+      });
+    }
+
+    if (validatedData.title && !validatedData.snippet) {
+      validatedData.snippet = validatedData.title;
+    }
+    delete validatedData.title;
+
+    if (
+      validatedData.timestamp !== undefined &&
+      validatedData.startTime === undefined
+    ) {
+      validatedData.startTime = validatedData.timestamp;
+    }
+    delete validatedData.timestamp;
+
+    const newStart =
+      validatedData.startTime !== undefined
+        ? validatedData.startTime
+        : moment.startTime;
+
+    if (
+      validatedData.startTime !== undefined &&
+      validatedData.endTime === undefined
+    ) {
+      if (moment.endTime !== undefined && moment.endTime <= newStart) {
+        validatedData.endTime = newStart + 10;
+      }
+    }
+
+    const newEnd =
+      validatedData.endTime !== undefined
+        ? validatedData.endTime
+        : moment.endTime;
+
+    if (newEnd !== undefined && newStart !== undefined && newEnd < newStart) {
+      return res.status(400).json({
+        success: false,
+        message: "End time cannot be before start time",
       });
     }
 
@@ -174,7 +274,7 @@ export const updateKeyMoment = async (req, res) => {
       "name email profilePicture",
     );
 
-    const io = req.app.get("io");
+    const io = req.app?.get("io");
     if (io) {
       io.to(getKeyMomentsRoom(moment.meetingId.toString())).emit(
         "keyMoment:updated",
@@ -216,7 +316,21 @@ export const deleteKeyMoment = async (req, res) => {
         .json({ success: false, message: "Key moment not found" });
     }
 
-    if (moment.userId.toString() !== req.user._id.toString()) {
+    const isCreator =
+      moment.userId?.toString() === req.user?._id?.toString() ||
+      moment.userId?.toString() === req.user?.id?.toString();
+
+    let isMeetingOwner = false;
+    if (moment.meetingId) {
+      const meeting = await Meeting.findById(moment.meetingId);
+      if (meeting) {
+        isMeetingOwner =
+          meeting.uploadedBy?.toString() === req.user?._id?.toString();
+      }
+    }
+    const isAdmin = req.user?.role === "admin" || req.user?.role === "owner";
+
+    if (!isCreator && !isMeetingOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: "Not authorized to delete this key moment",
@@ -225,7 +339,7 @@ export const deleteKeyMoment = async (req, res) => {
 
     const meetingId = moment.meetingId;
     await moment.deleteOne();
-    const io = req.app.get("io");
+    const io = req.app?.get("io");
     if (io) {
       io.to(getKeyMomentsRoom(meetingId.toString())).emit(
         "keyMoment:deleted",
@@ -243,3 +357,90 @@ export const deleteKeyMoment = async (req, res) => {
       .json({ success: false, message: "Server Error", error: error.message });
   }
 };
+
+// @desc    Export key moments for a meeting / session as CSV
+// @route   GET /api/key-moments/export or GET /api/key-moments/meeting/:meetingId/export
+// @access  Private
+export const exportKeyMoments = async (req, res) => {
+  try {
+    const meetingId =
+      req.query.meetingId || req.query.sessionId || req.params.meetingId;
+    const userId = req.user._id;
+
+    if (!meetingId || !mongoose.isValidObjectId(meetingId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Valid meeting ID is required" });
+    }
+
+    const meeting = await Meeting.findById(meetingId);
+    if (!meeting) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Meeting not found" });
+    }
+
+    const isOwner = meeting.uploadedBy?.toString() === userId.toString();
+    const isParticipant = meeting.participants?.some(
+      (p) => p.user?.toString() === userId.toString(),
+    );
+    const isOrgMember =
+      req.user.organization &&
+      meeting.organization &&
+      req.user.organization.toString() === meeting.organization.toString();
+
+    if (!isOwner && !isParticipant && !isOrgMember) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to export key moments for this meeting",
+      });
+    }
+
+    const moments = await KeyMoment.find({ meetingId })
+      .populate("userId", "name email")
+      .sort({ startTime: 1 });
+
+    const formatCsvTime = (seconds) => {
+      if (isNaN(seconds) || seconds < 0) return "0:00";
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60)
+        .toString()
+        .padStart(2, "0");
+      return `${mins}:${secs}`;
+    };
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return '""';
+      const stringVal = String(val).replace(/"/g, '""');
+      return `"${stringVal}"`;
+    };
+
+    let csv = "Timestamp,Category,Key Moment Title,Note,Author\n";
+    moments.forEach((m) => {
+      const timeStr = formatCsvTime(m.startTime);
+      const category = m.category || "";
+      const snippet = m.snippet || "";
+      const note = m.note || "";
+      const author = m.userId?.name || m.userId?.email || "Unknown";
+      csv += `${escapeCsv(timeStr)},${escapeCsv(category)},${escapeCsv(snippet)},${escapeCsv(note)},${escapeCsv(author)}\n`;
+    });
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="session-${meetingId}-moments.csv"`,
+    );
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error("Error exporting key moments:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to compile moment summary.",
+      error: error.message,
+    });
+  }
+};
+
+export const exportMoments = exportKeyMoments;
+export const updateMoment = updateKeyMoment;
+export const deleteMoment = deleteKeyMoment;

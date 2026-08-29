@@ -10,7 +10,21 @@ const resourceBookingSchema = new mongoose.Schema(
     meetingId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Meeting",
-      required: true,
+      required: false,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
+    title: {
+      type: String,
+      default: "Facility Reservation Event",
+    },
+    status: {
+      type: String,
+      enum: ["CONFIRMED", "CANCELLED", "PENDING"],
+      default: "CONFIRMED",
     },
     startTime: {
       type: Date,
@@ -32,6 +46,7 @@ const resourceBookingSchema = new mongoose.Schema(
 resourceBookingSchema.index({ resourceId: 1, startTime: 1, endTime: 1 });
 resourceBookingSchema.index({ meetingId: 1 });
 resourceBookingSchema.index({ organization: 1 });
+resourceBookingSchema.index({ resourceId: 1, status: 1 });
 
 const ResourceBooking = mongoose.model(
   "ResourceBooking",

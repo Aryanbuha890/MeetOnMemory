@@ -23,6 +23,8 @@ const mapActionItem = (item) => ({
     upcoming: false,
     overdue: false,
   },
+  snoozedUntil: item.snoozedUntil || null,
+  customWarningOffsets: item.customWarningOffsets || [],
 });
 
 export default function useTasks() {
@@ -191,6 +193,26 @@ export default function useTasks() {
     }
   };
 
+  const updateTask = async (taskId, updates) => {
+    try {
+      const res = await knowledgeApi.updateActionItem(taskId, updates);
+      if (res.data?.success) {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t)),
+        );
+        toast.success("Task updated successfully");
+        return true;
+      } else {
+        toast.error(res.data?.message || "Failed to update task");
+        return false;
+      }
+    } catch (err) {
+      console.error("Error updating task:", err);
+      toast.error(err.response?.data?.message || "Failed to update task");
+      return false;
+    }
+  };
+
   const toggleTaskReminder = async (taskId, currentEnabled) => {
     try {
       const newEnabled = !currentEnabled;
@@ -263,6 +285,7 @@ export default function useTasks() {
     sortedTasks,
     handleSort,
     updateTaskStatus,
+    updateTask,
     toggleTaskReminder,
     clearFilters,
     hasActiveFilters,
