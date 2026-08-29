@@ -281,9 +281,6 @@ router.use(
 import meetingPatternRoutes from "./meetingPatternRoutes.js";
 router.use("/api/patterns", meetingPatternRoutes);
 
-import meetingClipRoutes from "./meetingClipRoutes.js";
-router.use("/api/clips", meetingClipRoutes);
-
 import guestAccessRoutes from "./guestAccessRoutes.js";
 router.use("/api", guestAccessRoutes);
 router.use("/api/custom-fields", customFieldRoutes);

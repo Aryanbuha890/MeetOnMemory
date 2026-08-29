@@ -615,6 +615,7 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                       </>
                     )}
                   </div>
+                </div>
                   <div className="flex flex-wrap gap-3">
                     {audioUrl ? (
                       <button
@@ -779,13 +780,13 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                         onClick={() => {
                           setActiveClipId(clip._id);
                           setAnnotationText("");
-                          setAnnotationTimestamp("");
+                          setAnnotationTimestamp(clip.startTime.toString());
                         }}
                         className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         + Add Annotation
                       </button>
-                    ))}
+                    )}
                   {trimmingClipId === clip._id && (
                     <form
                       onSubmit={(e) => handleTrimClip(e, clip._id)}

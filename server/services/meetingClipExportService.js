@@ -9,7 +9,7 @@ try {
   // Dynamically import fluent-ffmpeg so we don't crash if it isn't installed
   const fluentFfmpeg = await import("fluent-ffmpeg");
   ffmpeg = fluentFfmpeg.default || fluentFfmpeg;
-} catch (err) {
+} catch (_err) {
   console.log("ℹ️ fluent-ffmpeg module not loaded. Using fallback simulation.");
 }
 
