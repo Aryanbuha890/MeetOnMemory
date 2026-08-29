@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
+import { Link } from "react-router-dom";
 import {
   Sparkles,
   GitMerge,
@@ -14,6 +15,7 @@ import {
   X,
   Layers,
   CheckCircle,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import AppContent from "../context/AppContent.js";
@@ -261,6 +263,13 @@ const TopicExplorer = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              to="/topic-evolution"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm transition-all shadow-sm"
+            >
+              <TrendingUp className="h-4 w-4" />
+              <span>Topic Evolution</span>
+            </Link>
             <button
               type="button"
               data-testid="extract-topics-btn"

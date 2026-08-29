@@ -23,12 +23,26 @@ const highlightReelApi = {
   },
 
   /**
+   * Updates the highlight reel (narrative or highlights)
+   * @param {string} meetingId - Meeting ID
+   * @param {Object} updateData - Data containing narrative and/or highlights
+   */
+  updateHighlightReel: (meetingId, updateData) => {
+    return apiClient.put(
+      `/api/meetings/${meetingId}/highlight-reel`,
+      updateData,
+    );
+  },
+
+  /**
    * Exports the highlight reel to HTML
    * @param {string} meetingId - Meeting ID
+   * @param {Object} config - Optional config like onDownloadProgress
    */
-  exportHighlightReelHtml: (meetingId) => {
+  exportHighlightReelHtml: (meetingId, config = {}) => {
     return apiClient.get(`/api/meetings/${meetingId}/highlight-reel/export`, {
       responseType: "blob",
+      ...config,
     });
   },
 };

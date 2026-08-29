@@ -3,6 +3,7 @@ import {
   generateHighlightReel,
   getHighlightReel,
   exportHighlightReelHtml,
+  updateHighlightReel,
 } from "../controllers/highlightReelController.js";
 import userAuth from "../middleware/userAuth.js";
 
@@ -14,6 +15,8 @@ router.use(userAuth);
 router.post("/:meetingId/highlight-reel/generate", generateHighlightReel);
 
 router.get("/:meetingId/highlight-reel", getHighlightReel);
+
+router.put("/:meetingId/highlight-reel", updateHighlightReel);
 
 router.get("/:meetingId/highlight-reel/export", exportHighlightReelHtml);
 

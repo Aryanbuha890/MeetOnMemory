@@ -95,6 +95,9 @@ const RsvpInbox = lazy(() => import("../pages/RsvpInbox.jsx"));
 const MeetingCostAnalytics = lazy(
   () => import("../pages/MeetingCostAnalytics.jsx"),
 );
+const MeetingCostCalculatorPage = lazy(
+  () => import("../pages/MeetingCostCalculator.jsx"),
+);
 const MeetingROIDashboard = lazy(
   () => import("../pages/MeetingROIDashboard.jsx"),
 );
@@ -115,6 +118,9 @@ const MeetingHealthDashboard = lazy(
 );
 const AutomationRules = lazy(() => import("../pages/AutomationRules.jsx"));
 const TopicExplorer = lazy(() => import("../pages/TopicExplorer.jsx"));
+const TopicEvolutionExplorerPage = lazy(
+  () => import("../pages/TopicEvolutionExplorer.jsx"),
+);
 const TopicAnalyticsDashboard = lazy(
   () => import("../pages/TopicAnalyticsDashboard.jsx"),
 );
@@ -234,6 +240,26 @@ const ProtectedRoutes = (
         <ProtectedRoute>
           <RouteErrorBoundary>
             <TopicIntelligence />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/topic-evolution"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <TopicEvolutionExplorerPage />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/topics/evolution"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <TopicEvolutionExplorerPage />
           </RouteErrorBoundary>
         </ProtectedRoute>
       }
@@ -700,6 +726,16 @@ const ProtectedRoutes = (
       }
     />
     <Route
+      path="/meetings/:id"
+      element={
+        <ProtectedRoute resource="meetings" action="view">
+          <RouteErrorBoundary section="Meeting Details">
+            <MeetingDetails />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="/meeting/:id/briefing"
       element={
         <ProtectedRoute resource="meetings" action="view">
@@ -930,6 +966,22 @@ const ProtectedRoutes = (
       element={
         <ProtectedRoute resource="reports" action="view">
           <MeetingCostAnalytics />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/meeting-cost-calculator"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <MeetingCostCalculatorPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/analytics/meeting-cost-calculator"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <MeetingCostCalculatorPage />
         </ProtectedRoute>
       }
     />

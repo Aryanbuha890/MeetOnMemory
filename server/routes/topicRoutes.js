@@ -9,6 +9,7 @@ import {
   mergeClusters,
   triggerClustering,
   getTopicVelocityAndTrends,
+  getTopicEvolutionTimeline,
 } from "../controllers/topicController.js";
 import userAuth from "../middleware/userAuth.js";
 import { requireOrgMembership } from "../middleware/rbac.js";
@@ -26,6 +27,9 @@ const router = express.Router();
  */
 router.use(userAuth);
 router.use(requireOrgMembership);
+
+// Evolution and timeline route
+router.get("/evolution", getTopicEvolutionTimeline);
 
 // Meeting specific topic routes
 router.post("/extract/:meetingId", extractForMeeting);

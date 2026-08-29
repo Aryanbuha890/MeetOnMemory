@@ -504,3 +504,143 @@ export const getTopicVelocityAndTrends = async (req, res) => {
       .json({ success: false, error: "Failed to compute topic velocity" });
   }
 };
+
+import Decision from "../models/decisionModel.js";
+import ActionItem from "../models/actionItemModel.js";
+
+/**
+ * Fetch cross-meeting topic evolution timeline.
+ */
+export const getTopicEvolutionTimeline = async (req, res) => {
+  try {
+    const orgId = req.user.organization;
+    const { topic = "", startDate, endDate } = req.query;
+
+    const topicQuery = topic.trim().toLowerCase();
+
+    // Fetch meetings with populated topics
+    const meetingTopics = await MeetingTopic.find({ organization: orgId })
+      .populate("meeting", "title date participants duration summary createdAt")
+      .populate("topics.clusterId", "label")
+      .sort({ createdAt: 1 })
+      .lean();
+
+    const decisions = await Decision.find({
+      organization: orgId,
+      status: { $ne: "superseded" },
+    }).lean();
+
+    const actionItems = await ActionItem.find({
+      organization: orgId,
+      status: { $ne: "superseded" },
+    }).lean();
+
+    // Filter meeting topics matching search query
+    const timelineNodes = [];
+    const matchedTopicLabels = new Set();
+
+    meetingTopics.forEach((mt) => {
+      if (!mt.meeting) return;
+
+      const meetingDate = mt.meeting.date
+        ? new Date(mt.meeting.date)
+        : new Date(mt.createdAt);
+
+      if (startDate && new Date(startDate) > meetingDate) return;
+      if (endDate && new Date(endDate) < meetingDate) return;
+
+      const matchingTopics = (mt.topics || []).filter((t) => {
+        if (!topicQuery) return true;
+        const nameMatch = t.name?.toLowerCase().includes(topicQuery);
+        const clusterMatch = t.clusterId?.label
+          ?.toLowerCase()
+          .includes(topicQuery);
+        return nameMatch || clusterMatch;
+      });
+
+      if (matchingTopics.length > 0) {
+        matchingTopics.forEach((t) => {
+          if (t.name) matchedTopicLabels.add(t.name);
+          if (t.clusterId?.label) matchedTopicLabels.add(t.clusterId.label);
+        });
+
+        const meetingIdStr = mt.meeting._id.toString();
+
+        const topicWords = topicQuery.split(" ").filter((w) => w.length > 2);
+        const matchesTopic = (text) => {
+          if (!topicQuery) return true;
+          const lowerText = text.toLowerCase();
+          if (lowerText.includes(topicQuery)) return true;
+          return topicWords.some((w) => lowerText.includes(w));
+        };
+
+        const relatedDecisions = decisions.filter(
+          (d) =>
+            (d.sourceMeetingId?.toString() === meetingIdStr ||
+              d.meetingId?.toString() === meetingIdStr) &&
+            matchesTopic(d.text),
+        );
+
+        const relatedActionItems = actionItems.filter(
+          (a) =>
+            (a.sourceMeetingId?.toString() === meetingIdStr ||
+              a.meetingId?.toString() === meetingIdStr) &&
+            matchesTopic(a.text),
+        );
+
+        timelineNodes.push({
+          meetingId: meetingIdStr,
+          title: mt.meeting.title || "Untitled Meeting",
+          date: meetingDate,
+          participantCount: mt.meeting.participants?.length || 0,
+          topicsDiscussed: matchingTopics.map((t) => ({
+            name: t.name,
+            cluster: t.clusterId?.label || "General",
+          })),
+          decisions: relatedDecisions.map((d) => ({
+            id: d._id.toString(),
+            text: d.text,
+          })),
+          actionItems: relatedActionItems.map((a) => ({
+            id: a._id.toString(),
+            text: a.text,
+            assignee: a.assigneeName || a.owner || "Unassigned",
+          })),
+          sentiment:
+            matchingTopics.length > 2 ? "positive font-bold" : "neutral",
+        });
+      }
+    });
+
+    timelineNodes.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const totalDecisionsCount = timelineNodes.reduce(
+      (sum, node) => sum + node.decisions.length,
+      0,
+    );
+    const totalActionItemsCount = timelineNodes.reduce(
+      (sum, node) => sum + node.actionItems.length,
+      0,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        queryTopic: topic,
+        availableTopics: Array.from(matchedTopicLabels).slice(0, 20),
+        timeline: timelineNodes,
+        metrics: {
+          totalMeetings: timelineNodes.length,
+          totalDecisionsCount,
+          totalActionItemsCount,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching topic evolution timeline:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to compute topic evolution timeline",
+    });
+  }
+};

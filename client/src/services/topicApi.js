@@ -29,6 +29,15 @@ export const topicApi = {
 
   extractTopicsForMeeting: (meetingId) =>
     apiClient.post(`/api/topics/extract/${meetingId}`),
+
+  getTopicEvolutionTimeline: (topic = "", options = {}) => {
+    const params = new URLSearchParams();
+    if (topic) params.append("topic", topic);
+    if (options.startDate) params.append("startDate", options.startDate);
+    if (options.endDate) params.append("endDate", options.endDate);
+    const query = params.toString();
+    return apiClient.get(`/api/topics/evolution${query ? `?${query}` : ""}`);
+  },
 };
 
 export default topicApi;
