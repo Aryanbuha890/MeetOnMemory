@@ -8,84 +8,87 @@ import Meeting from "../models/meetingModel.js";
 import MeetingClip from "../models/meetingClipModel.js";
 
 // Mock fluent-ffmpeg
-jest.unstable_mockModule("fluent-ffmpeg", () => {
-  const mockFfmpegInstance = {
-    setStartTime: jest.fn().mockReturnThis(),
-    setDuration: jest.fn().mockReturnThis(),
-    output: jest.fn(function (op) {
-      this._outputPath = op;
-      return this;
-    }),
-    on: jest.fn(function (event, callback) {
-      if (!this._callbacks) this._callbacks = {};
-      this._callbacks[event] = callback;
-      return this;
-    }),
-    run: jest.fn(function () {
-      if (global.__mockFfmpegError) {
-        setTimeout(() => {
-          if (this._callbacks?.error) {
-            this._callbacks.error(new Error(global.__mockFfmpegError));
-          }
-        }, 10);
+jest.unstable_mockModule(
+  "fluent-ffmpeg",
+  () => {
+    const mockFfmpegInstance = {
+      setStartTime: jest.fn().mockReturnThis(),
+      setDuration: jest.fn().mockReturnThis(),
+      output: jest.fn(function (op) {
+        this._outputPath = op;
         return this;
-      }
-      setTimeout(() => {
-        if (this._callbacks?.progress) {
-          this._callbacks.progress({ percent: 50 });
+      }),
+      on: jest.fn(function (event, callback) {
+        if (!this._callbacks) this._callbacks = {};
+        this._callbacks[event] = callback;
+        return this;
+      }),
+      run: jest.fn(function () {
+        if (global.__mockFfmpegError) {
+          setTimeout(() => {
+            if (this._callbacks?.error) {
+              this._callbacks.error(new Error(global.__mockFfmpegError));
+            }
+          }, 10);
+          return this;
         }
         setTimeout(() => {
-          const clipsDir = path.resolve("uploads/clips");
-          if (!fs.existsSync(clipsDir)) {
-            fs.mkdirSync(clipsDir, { recursive: true });
+          if (this._callbacks?.progress) {
+            this._callbacks.progress({ percent: 50 });
           }
-          fs.writeFileSync(this._outputPath, "mock output content");
-          if (this._callbacks?.end) {
-            this._callbacks.end();
-          }
-        }, 50);
-      }, 25);
-      return this;
-    }),
-    mergeToFile: jest.fn(function (outputPath, _tempDir) {
-      this._outputPath = outputPath;
-      if (global.__mockFfmpegError) {
-        setTimeout(() => {
-          if (this._callbacks?.error) {
-            this._callbacks.error(new Error(global.__mockFfmpegError));
-          }
-        }, 10);
+          setTimeout(() => {
+            const clipsDir = path.resolve("uploads/clips");
+            if (!fs.existsSync(clipsDir)) {
+              fs.mkdirSync(clipsDir, { recursive: true });
+            }
+            fs.writeFileSync(this._outputPath, "mock output content");
+            if (this._callbacks?.end) {
+              this._callbacks.end();
+            }
+          }, 50);
+        }, 25);
         return this;
-      }
-      setTimeout(() => {
-        if (this._callbacks?.progress) {
-          this._callbacks.progress({ percent: 50 });
+      }),
+      mergeToFile: jest.fn(function (outputPath, _tempDir) {
+        this._outputPath = outputPath;
+        if (global.__mockFfmpegError) {
+          setTimeout(() => {
+            if (this._callbacks?.error) {
+              this._callbacks.error(new Error(global.__mockFfmpegError));
+            }
+          }, 10);
+          return this;
         }
         setTimeout(() => {
-          const clipsDir = path.resolve("uploads/clips");
-          if (!fs.existsSync(clipsDir)) {
-            fs.mkdirSync(clipsDir, { recursive: true });
+          if (this._callbacks?.progress) {
+            this._callbacks.progress({ percent: 50 });
           }
-          fs.writeFileSync(outputPath, "mock merged content");
-          if (this._callbacks?.end) {
-            this._callbacks.end();
-          }
-        }, 50);
-      }, 25);
-      return this;
-    }),
-  };
+          setTimeout(() => {
+            const clipsDir = path.resolve("uploads/clips");
+            if (!fs.existsSync(clipsDir)) {
+              fs.mkdirSync(clipsDir, { recursive: true });
+            }
+            fs.writeFileSync(outputPath, "mock merged content");
+            if (this._callbacks?.end) {
+              this._callbacks.end();
+            }
+          }, 50);
+        }, 25);
+        return this;
+      }),
+    };
 
-  const mockFfmpegConstructor = jest.fn(() => mockFfmpegInstance);
-  return {
-    default: mockFfmpegConstructor,
-  };
-}, { virtual: true });
+    const mockFfmpegConstructor = jest.fn(() => mockFfmpegInstance);
+    return {
+      default: mockFfmpegConstructor,
+    };
+  },
+  { virtual: true },
+);
 
 const { app } = await import("../server.js");
-const { createClerkTestToken, authHeader } = await import(
-  "./helpers/clerkTestAuth.js"
-);
+const { createClerkTestToken, authHeader } =
+  await import("./helpers/clerkTestAuth.js");
 
 let testUser, otherOrgUser;
 let userToken, otherUserToken;

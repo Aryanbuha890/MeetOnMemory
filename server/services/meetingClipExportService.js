@@ -51,7 +51,10 @@ class MeetingClipExportService {
         const sourceFileUrl = meeting.fileUrl || "";
         const sourcePath = sourceFileUrl.startsWith("uploads")
           ? path.resolve(sourceFileUrl)
-          : path.resolve("uploads", sourceFileUrl.replace(/^\/?uploads\/?/, ""));
+          : path.resolve(
+              "uploads",
+              sourceFileUrl.replace(/^\/?uploads\/?/, ""),
+            );
 
         const sourceExists = sourceFileUrl && fs.existsSync(sourcePath);
         if (!sourceExists) {
@@ -176,7 +179,9 @@ class MeetingClipExportService {
 
         const allInputsExist = inputPaths.length === clips.length;
         if (!allInputsExist) {
-          return reject(new Error("One or more clip source files are missing."));
+          return reject(
+            new Error("One or more clip source files are missing."),
+          );
         }
         if (!ffmpeg) {
           return reject(new Error("FFmpeg is not available."));
