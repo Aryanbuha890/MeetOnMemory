@@ -109,7 +109,7 @@ const ALLOWED_RECORDING_EXTENSIONS = [
   ".mkv",
 ];
 
-const meetingRecordingFilter = (req, file, cb) => {
+export const meetingRecordingFilter = (req, file, cb) => {
   if (!file) {
     return cb(null, true);
   }
@@ -141,9 +141,10 @@ const transcriptUpload = multer({
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
   fileFilter: meetingRecordingFilter,
 });
-const transcriptChunkUpload = multer({
+export const transcriptChunkUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit per chunk
+  fileFilter: meetingRecordingFilter,
 });
 
 // Apply rate limiting to all routes
