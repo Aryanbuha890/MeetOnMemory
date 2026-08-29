@@ -21,6 +21,13 @@ vi.mock("../../services", () => ({
     post: (...args) => apiPost(...args),
   },
 
+  searchApi: {
+    voiceSearch: vi.fn(),
+    federatedSearch: (payload) => apiPost("/api/search/federated", payload),
+    hybridSearch: (payload) => apiPost("/api/search/hybrid", payload),
+    semanticSearch: (payload) => apiPost("/api/search", payload),
+  },
+
   savedFilterApi: {
     getSavedFilters: vi.fn().mockResolvedValue({ data: [] }),
     createSavedFilter: vi.fn(),
@@ -157,5 +164,49 @@ describe("AiSearch meeting navigation (#615)", () => {
     expect(
       screen.getByRole("button", { name: /budget review/i }),
     ).toBeInTheDocument();
+  });
+
+  it("renders AI answer panel and filters by organizer/department (#2590)", async () => {
+    apiPost.mockResolvedValue({
+      data: {
+        results: [],
+        aiAnswer:
+          "Here is the result from the marketing team [Campaign Sync](mtg-123#t=45).",
+      },
+    });
+
+    renderAiSearch();
+
+    fireEvent.click(screen.getByRole("button", { name: /hybrid/i }));
+
+    fireEvent.change(getQueryInput(), {
+      target: { value: "campaign target" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/name or email/i), {
+      target: { value: "Search Expert" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. Sales/i), {
+      target: { value: "Marketing" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^search$/i }));
+
+    await waitFor(() => {
+      expect(apiPost).toHaveBeenCalledWith(
+        "/api/search/hybrid",
+        expect.objectContaining({
+          query: "campaign target",
+          organizer: "Search Expert",
+          department: "Marketing",
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/AI Assistant Answer/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Campaign Sync/i }),
+      ).toBeInTheDocument();
+    });
   });
 });
