@@ -14,6 +14,7 @@ import authenticateSocket from "../middleware/socketAuth.js";
 import pulseCheckSocket from "../socket/pulseCheckSocket.js";
 import activitySocket from "../socket/activitySocket.js";
 import playbookSocket from "../socket/playbookSocket.js";
+import mindMapSocket from "../socket/mindMapSocket.js";
 
 export function configureSocket(server, app) {
   // SOCKET.IO
@@ -96,6 +97,7 @@ export function configureSocket(server, app) {
   pulseCheckSocket(io);
   activitySocket(io);
   playbookSocket(io);
+  mindMapSocket(io);
 
   return io;
 }
