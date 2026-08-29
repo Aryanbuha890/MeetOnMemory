@@ -447,17 +447,7 @@ const AiSearch = () => {
     window.open(`/meeting/${meetingId}?t=${seconds}`, "_blank");
   };
 
-  const handleCopySummary = async (result) => {
-    const textToCopy = result.summary || result.transcript || "";
-    if (textToCopy) {
-      try {
-        await navigator.clipboard.writeText(textToCopy);
-        toast.success(t("aiSearch.copiedToClipboard"));
-      } catch (err) {
-        console.error("Failed to copy:", err);
-      }
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex flex-col">
