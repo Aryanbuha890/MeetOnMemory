@@ -99,7 +99,9 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
           if (data.clipId) {
             setExportProgress((prev) => ({
               ...prev,
-              [data.clipId]: data.error ? `Error: ${data.error}` : data.progress,
+              [data.clipId]: data.error
+                ? `Error: ${data.error}`
+                : data.progress,
             }));
             if (data.progress === 100) {
               fetchClips();
@@ -491,7 +493,10 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
             <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-2">
               Merge Compilation ({selectedClipIds.length} clips selected)
             </h4>
-            <form onSubmit={handleMergeClips} className="flex flex-col sm:flex-row gap-3">
+            <form
+              onSubmit={handleMergeClips}
+              className="flex flex-col sm:flex-row gap-3"
+            >
               <input
                 type="text"
                 value={compilationTitle}
@@ -510,21 +515,24 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                 {isMerging ? "Merging..." : "Export Compilation"}
               </button>
             </form>
-            {mergeProgressId && exportProgress[mergeProgressId] !== undefined && (
-              <div className="mt-3">
-                <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300 mb-1">
-                  <span>Export Progress</span>
-                  <span>{exportProgress[mergeProgressId]}%</span>
+            {mergeProgressId &&
+              exportProgress[mergeProgressId] !== undefined && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300 mb-1">
+                    <span>Export Progress</span>
+                    <span>{exportProgress[mergeProgressId]}%</span>
+                  </div>
+                  <div className="w-full bg-blue-200 dark:bg-blue-950 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${typeof exportProgress[mergeProgressId] === "number" ? exportProgress[mergeProgressId] : 0}%`,
+                      }}
+                      data-testid="merge-progress-bar"
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-blue-200 dark:bg-blue-950 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-                    style={{ width: `${typeof exportProgress[mergeProgressId] === 'number' ? exportProgress[mergeProgressId] : 0}%` }}
-                    data-testid="merge-progress-bar"
-                  />
-                </div>
-              </div>
-            )}
+              )}
           </div>
         )}
         {clips.length === 0 ? (
@@ -553,69 +561,69 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                     />
                     <div>
                       {editingClipId === clip._id ? (
-                      <form
-                        onSubmit={(e) => handleUpdateClip(e, clip._id)}
-                        className="space-y-2"
-                      >
-                        <label
-                          className="sr-only"
-                          htmlFor={`edit-title-${clip._id}`}
+                        <form
+                          onSubmit={(e) => handleUpdateClip(e, clip._id)}
+                          className="space-y-2"
                         >
-                          Title
-                        </label>
-                        <input
-                          id={`edit-title-${clip._id}`}
-                          type="text"
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          className={INPUT_CLASS}
-                          required
-                        />
-                        <label
-                          className="sr-only"
-                          htmlFor={`edit-description-${clip._id}`}
-                        >
-                          Description
-                        </label>
-                        <input
-                          id={`edit-description-${clip._id}`}
-                          type="text"
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                          className={INPUT_CLASS}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="submit"
-                            className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                          <label
+                            className="sr-only"
+                            htmlFor={`edit-title-${clip._id}`}
                           >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingClipId(null)}
-                            className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
+                            Title
+                          </label>
+                          <input
+                            id={`edit-title-${clip._id}`}
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className={INPUT_CLASS}
+                            required
+                          />
+                          <label
+                            className="sr-only"
+                            htmlFor={`edit-description-${clip._id}`}
                           >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <>
-                        <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                          {clip.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {clip.description}
-                        </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">
-                          {formatTime(clip.startTime)} -{" "}
-                          {formatTime(clip.endTime)}
-                        </p>
-                      </>
-                    )}
+                            Description
+                          </label>
+                          <input
+                            id={`edit-description-${clip._id}`}
+                            type="text"
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            className={INPUT_CLASS}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="submit"
+                              className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingClipId(null)}
+                              className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            {clip.title}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {clip.description}
+                          </p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">
+                            {formatTime(clip.startTime)} -{" "}
+                            {formatTime(clip.endTime)}
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
                   <div className="flex flex-wrap gap-3">
                     {audioUrl ? (
                       <button
@@ -853,7 +861,9 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                       <div className="w-full bg-gray-250 dark:bg-gray-950 rounded-full h-1 overflow-hidden">
                         <div
                           className="bg-blue-500 h-1 rounded-full transition-all duration-300"
-                          style={{ width: `${typeof exportProgress[clip._id] === 'number' ? exportProgress[clip._id] : 0}%` }}
+                          style={{
+                            width: `${typeof exportProgress[clip._id] === "number" ? exportProgress[clip._id] : 0}%`,
+                          }}
                           data-testid={`clip-progress-bar-${clip._id}`}
                         />
                       </div>
