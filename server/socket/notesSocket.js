@@ -1,7 +1,6 @@
-import jwt from "jsonwebtoken";
-import User from "../models/userModel.js";
 import CrdtService from "../services/crdtService.js";
 import NotePresence from "../models/NotePresence.js";
+import authenticateSocket from "../middleware/socketAuth.js";
 
 // Predefined colors for user cursors to ensure visual distinction
 const CURSOR_COLORS = [
@@ -25,24 +24,7 @@ const initializeNotesSocket = (io) => {
   const notesNamespace = io.of("/notes");
 
   // Authentication middleware for Socket.io connections
-  notesNamespace.use(async (socket, next) => {
-    try {
-      const token =
-        socket.handshake.auth.token ||
-        socket.handshake.headers.authorization?.split(" ")[1];
-      if (!token)
-        return next(new Error("Authentication error: No token provided"));
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select("name email role");
-      if (!user) return next(new Error("Authentication error: User not found"));
-
-      socket.user = user;
-      next();
-    } catch (_) {
-      next(new Error("Authentication error: Invalid token"));
-    }
-  });
+  notesNamespace.use(authenticateSocket);
 
   notesNamespace.on("connection", async (socket) => {
     console.log(`[NotesSocket] User ${socket.user.name} connected`);

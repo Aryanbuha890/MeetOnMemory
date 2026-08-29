@@ -105,8 +105,9 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 if (!process.env.JWT_SECRET) {
-  console.error("FATAL ERROR: JWT_SECRET environment variable is missing.");
-  process.exit(1);
+  console.warn(
+    "WARNING: JWT_SECRET environment variable is missing. Shared-link JWT functionality will be disabled.",
+  );
 }
 
 // DATABASE & CACHE
