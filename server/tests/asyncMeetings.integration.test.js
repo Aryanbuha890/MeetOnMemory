@@ -17,7 +17,24 @@ jest.unstable_mockModule("../models/asyncMeetingModel.js", () => ({
   },
 }));
 
-// Mock rate limiters to let requests through in tests
+const mockUserId = new mongoose.Types.ObjectId().toString();
+const mockUser = {
+  _id: mockUserId,
+  name: "Async Participant",
+  role: "member",
+};
+
+jest.unstable_mockModule("../middleware/userAuth.js", () => ({
+  default: (req, res, next) => {
+    if (!req.headers.authorization) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    req.user = mockUser;
+    next();
+  },
+  sanitizeAuthRequestForLog: jest.fn(),
+}));
+
 jest.unstable_mockModule("../middleware/rateLimiter.js", () => ({
   apiLimiter: (req, res, next) => next(),
   writeLimiter: (req, res, next) => next(),
@@ -29,29 +46,13 @@ const { default: asyncMeetingRoutes } = await import(
 
 describe("Async Meetings Server Integration Tests (#2666)", () => {
   let app;
-  let unauthApp;
-  const mockUserId = new mongoose.Types.ObjectId().toString();
-  const mockUser = {
-    _id: mockUserId,
-    name: "Async Participant",
-    role: "member",
-  };
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     app = express();
     app.use(express.json());
-    app.use((req, res, next) => {
-      req.user = mockUser;
-      next();
-    });
     app.use("/api/async-meetings", asyncMeetingRoutes);
-
-    unauthApp = express();
-    unauthApp.use(express.json());
-    // No req.user attached -> userAuth middleware rejects with 401
-    unauthApp.use("/api/async-meetings", asyncMeetingRoutes);
   });
 
   describe("GET /api/async-meetings", () => {
@@ -80,7 +81,9 @@ describe("Async Meetings Server Integration Tests (#2666)", () => {
       });
       mockCountDocuments.mockResolvedValueOnce(1);
 
-      const res = await request(app).get("/api/async-meetings?status=pending");
+      const res = await request(app)
+        .get("/api/async-meetings?status=pending")
+        .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -89,15 +92,16 @@ describe("Async Meetings Server Integration Tests (#2666)", () => {
     });
 
     it("returns 400 when an invalid status filter is provided", async () => {
-      const res = await request(app).get(
-        "/api/async-meetings?status=invalid_status",
-      );
+      const res = await request(app)
+        .get("/api/async-meetings?status=invalid_status")
+        .set("Authorization", "Bearer valid-token");
+
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Unsupported status filter");
     });
 
     it("returns 401 unauthenticated when credentials are missing", async () => {
-      const res = await request(unauthApp).get("/api/async-meetings");
+      const res = await request(app).get("/api/async-meetings");
       expect(res.status).toBe(401);
     });
   });
@@ -120,7 +124,9 @@ describe("Async Meetings Server Integration Tests (#2666)", () => {
         }),
       });
 
-      const res = await request(app).get(`/api/async-meetings/${id}`);
+      const res = await request(app)
+        .get(`/api/async-meetings/${id}`)
+        .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -138,14 +144,19 @@ describe("Async Meetings Server Integration Tests (#2666)", () => {
         }),
       });
 
-      const res = await request(app).get(`/api/async-meetings/${id}`);
+      const res = await request(app)
+        .get(`/api/async-meetings/${id}`)
+        .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(404);
       expect(res.body.error).toBe("Async meeting not found");
     });
 
     it("returns 400 for malformed MongoDB ObjectId", async () => {
-      const res = await request(app).get("/api/async-meetings/invalid-id");
+      const res = await request(app)
+        .get("/api/async-meetings/invalid-id")
+        .set("Authorization", "Bearer valid-token");
+
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("Invalid async meeting id");
     });
@@ -168,6 +179,7 @@ describe("Async Meetings Server Integration Tests (#2666)", () => {
 
       const res = await request(app)
         .post(`/api/async-meetings/${id}/submit`)
+        .set("Authorization", "Bearer valid-token")
         .send({
           answers: [
             { question: "What's blocked?", answer: "Nothing at the moment" },
@@ -184,7 +196,7 @@ describe("Async Meetings Server Integration Tests (#2666)", () => {
       const mockMeetingDoc = {
         _id: id,
         creator: mockUserId,
-        deadline: new Date(Date.now() - 3600000), // Expired 1 hour ago
+        deadline: new Date(Date.now() - 3600000),
         status: "pending",
         submissions: [],
       };
@@ -193,6 +205,7 @@ describe("Async Meetings Server Integration Tests (#2666)", () => {
 
       const res = await request(app)
         .post(`/api/async-meetings/${id}/submit`)
+        .set("Authorization", "Bearer valid-token")
         .send({
           answers: [{ question: "Q", answer: "A" }],
         });
@@ -206,6 +219,7 @@ describe("Async Meetings Server Integration Tests (#2666)", () => {
 
       const res = await request(app)
         .post(`/api/async-meetings/${id}/submit`)
+        .set("Authorization", "Bearer valid-token")
         .send({ answers: [] });
 
       expect(res.status).toBe(400);
