@@ -7,7 +7,7 @@ import MeetingStats from "./MeetingStats";
 import GlossaryHighlighter from "./GlossaryHighlighter";
 import NoteVersionHistory from "../NoteVersionHistory";
 import PrintMomModal from "../meetings/PrintMomModal.jsx";
-import { meetingApi, aiSummaryTemplateApi } from "../../services";
+import { meetingApi, aiSummaryTemplateApi, mindMapApi } from "../../services";
 
 const MeetingSummary = ({ meeting, onSummaryUpdated }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -15,6 +15,23 @@ const MeetingSummary = ({ meeting, onSummaryUpdated }) => {
   const [currentSummary, setCurrentSummary] = useState(
     meeting?.summary || meeting?.structuredMoM || null,
   );
+  const [mindMap, setMindMap] = useState(null);
+
+  useEffect(() => {
+    const fetchMap = async () => {
+      try {
+        if (meeting?._id) {
+          const res = await mindMapApi.getMindMap(meeting._id);
+          if (res.success && res.data && res.data.nodes?.length > 0) {
+            setMindMap(res.data);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load mind map for summary", err);
+      }
+    };
+    fetchMap();
+  }, [meeting?._id]);
 
   // Template Modal & History Modal state
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -556,6 +573,67 @@ const MeetingSummary = ({ meeting, onSummaryUpdated }) => {
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {mindMap && mindMap.nodes?.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-1.5">
+                  <svg
+                    className="w-4 h-4 text-indigo-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    />
+                  </svg>
+                  Brainstorming Mind Map
+                </h4>
+                <div className="w-full h-64 bg-slate-950 rounded-2xl relative border border-slate-900/60 overflow-hidden">
+                  <svg className="absolute inset-0 w-full h-full">
+                    {mindMap.connections?.map((conn) => {
+                      const sourceNode = mindMap.nodes.find(
+                        (n) => n.id === conn.source,
+                      );
+                      const targetNode = mindMap.nodes.find(
+                        (n) => n.id === conn.target,
+                      );
+                      if (!sourceNode || !targetNode) return null;
+                      return (
+                        <line
+                          key={conn.id}
+                          x1={sourceNode.x + 50}
+                          y1={sourceNode.y + 20}
+                          x2={targetNode.x + 50}
+                          y2={targetNode.y + 20}
+                          stroke="#475569"
+                          strokeWidth="1.5"
+                          strokeDasharray="3 3"
+                        />
+                      );
+                    })}
+                  </svg>
+                  {mindMap.nodes?.map((node) => (
+                    <div
+                      key={node.id}
+                      className="absolute px-2 py-1 text-[10px] font-black text-white rounded-lg border border-slate-800 shadow flex items-center justify-center truncate select-none"
+                      style={{
+                        left: `${node.x}px`,
+                        top: `${node.y}px`,
+                        width: "100px",
+                        height: "40px",
+                        backgroundColor: node.color,
+                      }}
+                    >
+                      {node.text}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

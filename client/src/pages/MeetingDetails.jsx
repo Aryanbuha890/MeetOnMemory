@@ -74,6 +74,7 @@ import PrintMomModal from "../components/meetings/PrintMomModal.jsx";
 import TransferOwnershipModal from "./meeting-details/TransferOwnershipModal";
 import ActionItemsList from "../components/actionItems/ActionItemsList";
 import DecisionVotingPanel from "../components/meetings/DecisionVotingPanel";
+import MindMapBoard from "../components/meetings/MindMapBoard";
 import { Printer } from "lucide-react";
 import RetrospectiveBoard from "../components/meeting-details/RetrospectiveBoard";
 
@@ -540,6 +541,13 @@ const MeetingDetails = () => {
               Tasks & Action Items
             </h2>
             <ActionItemsList meetingId={meeting._id} />
+          </div>
+
+          <div className="mt-6 mb-6">
+            <MindMapBoard
+              meetingId={meeting._id}
+              participants={meeting.participants}
+            />
           </div>
 
           <div className="mt-6 mb-6">
