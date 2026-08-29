@@ -93,7 +93,8 @@ export default (io) => {
           // Validate payload size and types
           if (!validateMindMapPayload(nodes, connections)) {
             socket.emit("mindmap:error", {
-              message: "Invalid mind map payload structure or size limit exceeded",
+              message:
+                "Invalid mind map payload structure or size limit exceeded",
             });
             return;
           }
