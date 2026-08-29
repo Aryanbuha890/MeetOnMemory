@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useMindMap } from "../../hooks/useMindMap";
 import {
   Plus,
@@ -75,7 +75,6 @@ const MindMapBoard = ({ meetingId, participants }) => {
     }
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const svgRect = boardRef.current.getBoundingClientRect();
 
     // Exact offset inside the node
     dragOffsetRef.current = {
@@ -146,7 +145,7 @@ const MindMapBoard = ({ meetingId, participants }) => {
       setAssigneeId("");
       setDueDate("");
       setPriority("medium");
-    } catch (err) {
+    } catch (_err) {
       toast.error("Failed to convert node to action item");
     }
   };
