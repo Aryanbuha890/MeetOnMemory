@@ -78,9 +78,8 @@ jest.unstable_mockModule("../models/RecordingSession.js", () => ({
   },
 }));
 
-const { uploadTranscriptChunk, persistCaptionSegments } = await import(
-  "../controllers/transcriptController.js"
-);
+const { uploadTranscriptChunk, persistCaptionSegments } =
+  await import("../controllers/transcriptController.js");
 
 describe("Live Transcript Chunk Speaker Attribution Integration Tests (#2665)", () => {
   let app;
@@ -210,9 +209,24 @@ describe("Live Transcript Chunk Speaker Attribution Integration Tests (#2665)", 
       .post(`/api/meetings/${mockMeetingId}/transcript/captions`)
       .send({
         segments: [
-          { text: "First point by Alice", speakerId: "spk_1", startTime: 0, endTime: 3 },
-          { text: "Second point by Bob", speakerId: "spk_2", startTime: 3, endTime: 6 },
-          { text: "Follow-up by Alice", speakerId: "spk_1", startTime: 6, endTime: 9 },
+          {
+            text: "First point by Alice",
+            speakerId: "spk_1",
+            startTime: 0,
+            endTime: 3,
+          },
+          {
+            text: "Second point by Bob",
+            speakerId: "spk_2",
+            startTime: 3,
+            endTime: 6,
+          },
+          {
+            text: "Follow-up by Alice",
+            speakerId: "spk_1",
+            startTime: 6,
+            endTime: 9,
+          },
         ],
       });
 

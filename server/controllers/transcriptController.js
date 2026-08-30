@@ -1659,7 +1659,8 @@ export const persistCaptionSegments = async (req, res) => {
         await resolveSpeakerAttribution(meetingId, raw, user);
 
       const speaker = attrSpeaker;
-      const speakerId = attrSpeakerId || (raw.speakerId ? String(raw.speakerId) : null);
+      const speakerId =
+        attrSpeakerId || (raw.speakerId ? String(raw.speakerId) : null);
       const startTime =
         typeof raw.startTime === "number"
           ? raw.startTime
