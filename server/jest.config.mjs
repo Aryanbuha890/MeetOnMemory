@@ -17,6 +17,19 @@ export default {
   // Run those suites via `npm run test:unit` instead.
   testPathIgnorePatterns: [
     "/node_modules/",
+
+    // Vitest-authored suites are named `*.vitest.test.js` and are excluded by
+    // this one pattern (Issue #2575).
+    //
+    // The list below is the alternative, and it is why this pattern exists:
+    // every contributor adding a Vitest suite had to append a filename here,
+    // to `test:unit` in package.json, and to VITEST_TEST_FILES in
+    // scripts/validation/run-server-related-tests.mjs. Three hand-maintained
+    // registries, all edited at the same line, so any two such PRs conflicted
+    // with each other by construction. A new suite that follows the naming
+    // convention needs no registration at all.
+    "\\.vitest\\.test\\.js$",
+
     "documentSyncAuthorization.test.js",
     "workspaceSocketAuthentication.test.js",
     "topicValidation.test.js",

@@ -293,11 +293,17 @@ export const updateActionItem = async (req, res) => {
       "title",
       "text",
       "description",
+      "snoozedUntil",
+      "customWarningOffsets",
     ];
     const updates = {};
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     });
+
+    if (updates.customWarningOffsets !== undefined) {
+      updates.warningsSent = [];
+    }
 
     if (updates.title && !updates.text) {
       updates.text = updates.title;
@@ -332,6 +338,49 @@ export const updateActionItem = async (req, res) => {
       new: true,
       runValidators: true,
     }).populate("assignee", "name avatar");
+
+    // --- Audit log for snooze / alert options ---
+    try {
+      const AuditService = (await import("../services/AuditService.js"))
+        .default;
+      const actingUserId = req.user._id || req.user.id;
+      const orgId =
+        item.organization || req.user.organization || req.user.organizationId;
+
+      if (updates.snoozedUntil !== undefined) {
+        const isSnoozed = updates.snoozedUntil !== null;
+        await AuditService.logAction({
+          actorId: actingUserId,
+          action: isSnoozed ? "ACTION_ITEM_SNOOZED" : "ACTION_ITEM_UNSNOOZED",
+          entity: "ActionItem",
+          entityId: id,
+          organizationId: orgId,
+          details: {
+            snoozedUntil: updates.snoozedUntil,
+            previousSnoozedUntil: item.snoozedUntil,
+          },
+        });
+      }
+
+      if (updates.customWarningOffsets !== undefined) {
+        await AuditService.logAction({
+          actorId: actingUserId,
+          action: "ACTION_ITEM_ALERT_OPTIONS_UPDATED",
+          entity: "ActionItem",
+          entityId: id,
+          organizationId: orgId,
+          details: {
+            customWarningOffsets: updates.customWarningOffsets,
+            previousWarningOffsets: item.customWarningOffsets,
+          },
+        });
+      }
+    } catch (auditErr) {
+      console.error(
+        "Audit log failed for action item snooze/alerts:",
+        auditErr,
+      );
+    }
 
     // --- Changelog Tracking ---
     try {

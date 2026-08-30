@@ -20,6 +20,8 @@ export const knowledgeApi = {
   },
   updateActionItemStatus: (id, status) =>
     apiClient.patch(`/api/knowledge/action-items/${id}`, { status }),
+  updateActionItem: (id, updates) =>
+    apiClient.patch(`/api/action-items/${id}`, updates),
   toggleActionItemReminder: (id, enabled) =>
     apiClient.patch(`/api/knowledge/action-items/${id}/reminders`, { enabled }),
   getDecisions: (sortBy = "createdAt", status, options = {}) => {
@@ -136,6 +138,17 @@ export const knowledgeApi = {
     apiClient.post(`/api/knowledge/conflicts/${conflictId}/resolve`, {
       resolutionType,
       ...(keptMemoryId ? { keptMemoryId } : {}),
+      ...(customValue ? { customValue } : {}),
+      ...(note ? { note } : {}),
+    }),
+  getConflictAuditHistory: ({ page = 1, limit = 50 } = {}) =>
+    apiClient.get(
+      `/api/knowledge/conflicts/audit-history?page=${page}&limit=${limit}`,
+    ),
+  bulkResolveConflicts: ({ conflictIds, resolutionType, customValue, note }) =>
+    apiClient.post(`/api/knowledge/conflicts/bulk-resolve`, {
+      conflictIds,
+      resolutionType,
       ...(customValue ? { customValue } : {}),
       ...(note ? { note } : {}),
     }),

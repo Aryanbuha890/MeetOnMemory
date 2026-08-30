@@ -90,6 +90,41 @@ export const getHighlightReel = async (meetingId, organizationId) => {
 };
 
 /**
+ * Updates the highlight reel (narrative and/or highlights trim/order).
+ */
+export const updateHighlightReel = async (
+  meetingId,
+  organizationId,
+  updateData,
+) => {
+  const reel = await HighlightReel.findOne({
+    meetingId,
+    organization: organizationId,
+  });
+  if (!reel) {
+    throw new Error("Highlight reel not found");
+  }
+
+  if (typeof updateData.narrative === "string") {
+    reel.narrative = updateData.narrative;
+  }
+
+  if (Array.isArray(updateData.highlights)) {
+    reel.highlights = updateData.highlights.map((h) => ({
+      ...h,
+      timestamp: Number(h.timestamp) || 0,
+      endTime:
+        h.endTime !== undefined && h.endTime !== null
+          ? Number(h.endTime)
+          : undefined,
+    }));
+  }
+
+  await reel.save();
+  return reel;
+};
+
+/**
  * Generates an HTML string for exporting the highlight reel.
  */
 export const generateExportHtml = async (meetingId, organizationId) => {

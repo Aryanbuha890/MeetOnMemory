@@ -16,6 +16,7 @@ import TaskFilterPanel from "../components/tasks/TaskFilterPanel";
 import TaskSortBar from "../components/tasks/TaskSortBar";
 import TaskCard from "../components/tasks/TaskCard";
 import TaskDetailsModal from "../components/tasks/TaskDetailsModal";
+import ActionItemDependencyGraph from "../components/tasks/ActionItemDependencyGraph.jsx";
 import Pagination from "../components/meetings/Pagination";
 
 const Tasks = () => {
@@ -48,6 +49,12 @@ const Tasks = () => {
             {t("tasks.consolidateMemories")}
           </button>
         </div>
+
+        <ActionItemDependencyGraph
+          taskItems={taskState.sortedTasks}
+          onSelectTask={taskState.setSelectedTask}
+          className="mb-8"
+        />
 
         <TaskFilterPanel {...taskState} />
         <TaskSortBar

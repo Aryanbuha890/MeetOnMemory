@@ -222,6 +222,17 @@ export const createMeeting = async (uploaderId, orgId, data) => {
     auditNote: data.auditNote || "",
   });
 
+  try {
+    const { initializeAttendance } =
+      await import("./meetingAttendanceService.js");
+    await initializeAttendance(meeting._id, meeting.participants);
+  } catch (err) {
+    console.error(
+      "⚠️ Attendance initialization error (continuing):",
+      err.message,
+    );
+  }
+
   scheduleIndexMeeting(meeting);
 
   if (orgId) {

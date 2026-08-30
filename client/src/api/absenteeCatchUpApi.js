@@ -20,6 +20,14 @@ export const absenteeCatchUpApi = {
     return response.data;
   },
 
+  generateAndDeliverCatchUp: async (meetingId, absenteeIds = []) => {
+    const response = await apiClient.post(
+      `/api/absentee-catchup/meeting/${meetingId}/generate-deliver`,
+      { absenteeIds },
+    );
+    return response.data;
+  },
+
   markAsRead: async (id) => {
     const response = await apiClient.post(
       `/api/absentee-catchup/${id}/mark-read`,

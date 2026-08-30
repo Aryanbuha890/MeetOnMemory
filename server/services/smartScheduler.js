@@ -131,9 +131,17 @@ class SmartScheduler {
 
       const isBusyCalendar = this.hasConflict(slot, busyIntervals);
       const isBusyFocusTime = this.hasConflict(slot, focusIntervals);
+      const hasHardFocusBlock = focusIntervals.some(
+        (fi) =>
+          this.hasConflict(slot, [fi]) &&
+          (fi.policy === "block" || fi.allowOverride === false),
+      );
       const isBusy = isBusyCalendar || isBusyFocusTime;
 
-      if (isBusy) {
+      if (hasHardFocusBlock) {
+        conflicts.push(userId);
+        score -= 100; // Heavily penalize or disqualify hard focus blocks
+      } else if (isBusy) {
         conflicts.push(userId);
         score -= 20;
       } else {

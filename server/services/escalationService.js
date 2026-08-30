@@ -7,29 +7,39 @@ import { createNotification } from "./notificationService.js";
 /**
  * Service to evaluate active escalation policies against overdue action items.
  */
-export const evaluateEscalations = async () => {
-  console.log("[EscalationService] Starting escalation evaluation job...");
+export const evaluateEscalations = async (options = {}) => {
+  const { policyId = null, organizationId = null } =
+    typeof options === "string" ? { organizationId: options } : options || {};
+  console.log(
+    `[EscalationService] Starting escalation evaluation job (org: ${organizationId || "all"}, policy: ${policyId || "all"})...`,
+  );
+
+  const createdEvents = [];
 
   try {
-    const activePolicies = await EscalationPolicy.find({
-      isActive: true,
-    }).lean();
+    const policyQuery = { isActive: true };
+    if (organizationId) policyQuery.organization = organizationId;
+    if (policyId) policyQuery._id = policyId;
+
+    const activePolicies = await EscalationPolicy.find(policyQuery).lean();
     if (!activePolicies.length) {
       console.log("[EscalationService] No active policies found.");
-      return;
+      return { evaluatedCount: 0, eventsCreated: 0, events: [] };
     }
 
     const orgIds = activePolicies.map((p) => p.organization);
 
     // Find open action items that have a due date in the past
     const now = new Date();
-    const overdueItems = await ActionItem.find({
+    const itemQuery = {
       organization: { $in: orgIds },
       status: {
         $in: ["open", "in-progress", "pending", "in_progress", "overdue"],
       },
       dueDate: { $lt: now, $ne: null },
-    })
+    };
+
+    const overdueItems = await ActionItem.find(itemQuery)
       .populate("assignee")
       .lean();
 
@@ -37,7 +47,7 @@ export const evaluateEscalations = async () => {
       console.log(
         "[EscalationService] No overdue action items found for policies.",
       );
-      return;
+      return { evaluatedCount: 0, eventsCreated: 0, events: [] };
     }
 
     // Group policies by organization for quick lookup
@@ -85,6 +95,8 @@ export const evaluateEscalations = async () => {
       );
 
       let actionTaken = `Triggered step ${stepIndexToTrigger} (Delay: ${stepToTrigger.delayHours}h). `;
+      let eventStatus = "success";
+      let errorDetails = "";
 
       try {
         await executeStepAction(stepToTrigger, item, policy);
@@ -94,27 +106,41 @@ export const evaluateEscalations = async () => {
           `[EscalationService] Failed to execute step for item ${item._id}:`,
           err,
         );
+        eventStatus = "failed";
+        errorDetails = err.message || "Execution error";
         actionTaken += `Action '${stepToTrigger.actionType}' failed: ${err.message}`;
       }
 
       // Record the event
-      await EscalationEvent.create({
+      const eventRecord = await EscalationEvent.create({
         actionItem: item._id,
         policy: policy._id,
         organization: item.organization,
         stepIndex: stepIndexToTrigger,
         actionTaken,
+        status: eventStatus,
+        errorDetails,
       });
 
-      // Update item status if it wasn't overdue before (optional, maybe just for reporting)
+      createdEvents.push(eventRecord);
+
+      // Update item status if it wasn't overdue before
       if (item.status !== "overdue") {
         await ActionItem.updateOne({ _id: item._id }, { status: "overdue" });
       }
     }
 
-    console.log("[EscalationService] Escalation evaluation job completed.");
+    console.log(
+      `[EscalationService] Escalation evaluation completed. ${createdEvents.length} events created.`,
+    );
+    return {
+      evaluatedCount: overdueItems.length,
+      eventsCreated: createdEvents.length,
+      events: createdEvents,
+    };
   } catch (error) {
     console.error("[EscalationService] Error in evaluateEscalations:", error);
+    throw error;
   }
 };
 

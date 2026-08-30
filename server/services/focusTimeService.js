@@ -71,7 +71,14 @@ class FocusTimeService {
         if (slotEnd > rangeStart && slotStart < rangeEnd) {
           // We also make sure the recurring block started before this generated slot
           if (slotStart >= blockStart) {
-            occurrences.push({ start: slotStart, end: slotEnd });
+            occurrences.push({
+              start: slotStart,
+              end: slotEnd,
+              blockId: block._id,
+              title: block.title || "Focus Time",
+              policy: block.policy || "warn",
+              allowOverride: block.allowOverride !== false,
+            });
           }
         }
       }
@@ -102,7 +109,14 @@ class FocusTimeService {
         const blockEnd = new Date(block.endTime);
 
         if (blockEnd > rangeStart && blockStart < rangeEnd) {
-          intervals.push({ start: blockStart, end: blockEnd });
+          intervals.push({
+            start: blockStart,
+            end: blockEnd,
+            blockId: block._id,
+            title: block.title || "Focus Time",
+            policy: block.policy || "warn",
+            allowOverride: block.allowOverride !== false,
+          });
         }
       }
     });
@@ -122,6 +136,30 @@ class FocusTimeService {
     return intervals.some((interval) => {
       return start < interval.end && end > interval.start;
     });
+  }
+
+  /**
+   * Check conflicts against focus time blocks with policy enforcement details
+   */
+  static async checkConflicts(userId, startTime, endTime) {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const intervals = await this.getActiveIntervals(userId, start, end);
+
+    const conflicts = intervals.filter(
+      (interval) => start < interval.end && end > interval.start,
+    );
+
+    const hasHardBlock = conflicts.some(
+      (c) => c.policy === "block" || c.allowOverride === false,
+    );
+
+    return {
+      hasConflict: conflicts.length > 0,
+      hasHardBlock,
+      conflicts,
+      allowOverride: !hasHardBlock,
+    };
   }
 
   /**

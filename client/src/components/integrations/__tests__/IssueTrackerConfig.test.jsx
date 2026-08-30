@@ -19,7 +19,7 @@ vi.mock("react-toastify", () => ({
   },
 }));
 
-describe("IssueTrackerConfig Component (#2238)", () => {
+describe("IssueTrackerConfig Component (#2238, #2648)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -116,18 +116,115 @@ describe("IssueTrackerConfig Component (#2238)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Connected Workspace/i)).toBeInTheDocument();
+      expect(screen.getByText("Connected")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/12 tasks/i)).toBeInTheDocument();
-    expect(screen.getByText(/Disconnect/i)).toBeInTheDocument();
+    expect(screen.getByText("PROJ")).toBeInTheDocument();
+    expect(screen.getByText("12 tasks")).toBeInTheDocument();
+  });
 
-    // Expand sync history
-    const historyBtn = screen.getByText(/View Recent Sync History/i);
-    fireEvent.click(historyBtn);
+  it("triggers manual sync when Sync Now is clicked (#2648)", async () => {
+    apiClient.get.mockImplementation((url) => {
+      if (url.includes("/config")) {
+        return Promise.resolve({
+          data: {
+            data: {
+              provider: "jira",
+              config: { projectKey: "PROJ" },
+            },
+          },
+        });
+      }
+      if (url.includes("/sync-status")) {
+        return Promise.resolve({
+          data: {
+            data: {
+              connected: true,
+              lastSyncStatus: "idle",
+              syncCount: 5,
+              syncLogs: [],
+            },
+          },
+        });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    apiClient.post.mockResolvedValue({
+      data: {
+        success: true,
+        message: "Sync completed successfully",
+        data: {
+          lastSyncAt: "2026-08-29T12:00:00Z",
+          lastSyncStatus: "success",
+          syncCount: 6,
+          syncLogs: [],
+        },
+      },
+    });
+
+    render(
+      <IssueTrackerConfig
+        provider="jira"
+        title="Jira Integration"
+        description="Sync action items to Jira"
+        icon={<span>JiraIcon</span>}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sync-now-button")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("sync-now-button"));
+
+    await waitFor(() => {
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/issue-tracker/jira/sync",
+      );
+    });
+  });
+
+  it("renders lastSyncError banner when sync error is present (#2648)", async () => {
+    apiClient.get.mockImplementation((url) => {
+      if (url.includes("/config")) {
+        return Promise.resolve({
+          data: {
+            data: { provider: "linear", config: { teamId: "ENG" } },
+          },
+        });
+      }
+      if (url.includes("/sync-status")) {
+        return Promise.resolve({
+          data: {
+            data: {
+              connected: true,
+              lastSyncStatus: "error",
+              lastSyncError: "Webhook timeout while reconciling issues",
+              syncCount: 2,
+              syncLogs: [],
+            },
+          },
+        });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    render(
+      <IssueTrackerConfig
+        provider="linear"
+        title="Linear Integration"
+        description="Sync action items to Linear"
+        icon={<span>LinearIcon</span>}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sync-error-banner")).toBeInTheDocument();
+    });
 
     expect(
-      screen.getByText(/Created Jira issue PROJ-101/i),
+      screen.getByText("Webhook timeout while reconciling issues"),
     ).toBeInTheDocument();
   });
 });

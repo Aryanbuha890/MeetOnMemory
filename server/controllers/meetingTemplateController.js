@@ -1,5 +1,6 @@
 import MeetingTemplate from "../models/meetingTemplateModel.js";
-
+import * as MeetingCloneService from "../services/meetingCloneService.js";
+import { sendSuccess } from "../utils/responseHandler.js";
 // @desc    Create a new meeting template
 // @route   POST /api/templates
 // @access  Private (Org Admin)
@@ -103,6 +104,35 @@ export const getTemplateById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching template by ID:", error);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// @desc    Instantiate a new meeting from a template
+// @route   POST /api/meeting-templates/:id/instantiate
+// @access  Private (Org Member)
+export const instantiateTemplate = async (req, res, next) => {
+  try {
+    const templateId = req.params.id;
+    const userId = req.user._id;
+
+    const options = {};
+    if (req.body.newDate) {
+      options.newDate = new Date(req.body.newDate);
+    }
+
+    const newMeeting = await MeetingCloneService.instantiateFromTemplate(
+      templateId,
+      userId,
+      options,
+    );
+    return sendSuccess(
+      res,
+      { meeting: newMeeting },
+      "Meeting instantiated successfully",
+      201,
+    );
+  } catch (err) {
+    next(err);
   }
 };
 

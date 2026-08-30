@@ -39,6 +39,10 @@ const TeamMembers = () => {
     handleResendInvite,
     handleCancelInvite,
     handleExpireInvite,
+    handleUpdateRole,
+    handleDeactivateMember,
+    handleReactivateMember,
+    handleUpdateCapacity,
   } = useTeamManagement(activeTab);
 
   const [filteredMembers, setFilteredMembers] = useState([]);
@@ -47,6 +51,7 @@ const TeamMembers = () => {
   const [sortBy] = useState("name");
   const [sortOrder] = useState("asc");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showBulkInviteModal, setShowBulkInviteModal] = useState(false);
@@ -68,6 +73,19 @@ const TeamMembers = () => {
       result = result.filter((member) => member.role === roleFilter);
     }
 
+    if (statusFilter !== "all") {
+      if (statusFilter === "active") {
+        result = result.filter((m) => !m.status || m.status === "active");
+      } else if (statusFilter === "deactivated") {
+        result = result.filter(
+          (m) =>
+            m.status === "inactive" ||
+            m.status === "suspended" ||
+            m.status === "deactivated",
+        );
+      }
+    }
+
     result.sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
@@ -87,7 +105,7 @@ const TeamMembers = () => {
     });
 
     setFilteredMembers(result);
-  }, [members, searchQuery, roleFilter, sortBy, sortOrder]);
+  }, [members, searchQuery, roleFilter, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     applyFiltersAndSort();
@@ -239,11 +257,23 @@ const TeamMembers = () => {
                     <select
                       value={roleFilter}
                       onChange={(e) => setRoleFilter(e.target.value)}
-                      className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
                       <option value="all">All Roles</option>
+                      <option value="owner">Owner</option>
                       <option value="admin">Admin</option>
                       <option value="member">Member</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active Only</option>
+                      <option value="deactivated">Deactivated Only</option>
                     </select>
                   </div>
                 )}
@@ -254,6 +284,11 @@ const TeamMembers = () => {
               members={filteredMembers}
               searchQuery={searchQuery}
               roleFilter={roleFilter}
+              isAdmin={isAdmin}
+              onDeactivate={handleDeactivateMember}
+              onReactivate={handleReactivateMember}
+              onUpdateRole={handleUpdateRole}
+              onUpdateCapacity={handleUpdateCapacity}
             />
           </>
         ) : (

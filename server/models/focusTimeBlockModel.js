@@ -40,6 +40,15 @@ const focusTimeBlockSchema = new mongoose.Schema(
       type: String,
       default: "UTC",
     },
+    allowOverride: {
+      type: Boolean,
+      default: true,
+    },
+    policy: {
+      type: String,
+      enum: ["warn", "block"],
+      default: "warn",
+    },
   },
   {
     timestamps: true,

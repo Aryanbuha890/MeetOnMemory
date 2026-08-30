@@ -29,4 +29,11 @@ export const focusTimeApi = {
     });
     return response.data;
   },
+
+  checkConflicts: async (startTime, endTime, userId) => {
+    const response = await apiClient.get(`${FOCUS_TIME_URL}/conflicts`, {
+      params: { startTime, endTime, userId },
+    });
+    return response.data;
+  },
 };

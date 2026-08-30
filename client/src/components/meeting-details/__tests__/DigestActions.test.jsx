@@ -21,9 +21,9 @@ vi.mock("../../../services", () => ({
 }));
 
 vi.mock("../../SandboxedHtmlPreview.jsx", () => ({
-  default: ({ htmlContent, title }) => (
+  default: ({ htmlContent, title, error }) => (
     <div data-testid="digest-html-preview" title={title}>
-      {htmlContent}
+      {error ? <div role="alert">{error}</div> : htmlContent}
     </div>
   ),
 }));

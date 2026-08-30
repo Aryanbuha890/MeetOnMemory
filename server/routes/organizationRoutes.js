@@ -20,6 +20,10 @@ import {
   inviteMember,
   acceptInviteToken,
   updateMemberRole,
+  deactivateMember,
+  reactivateMember,
+  updateMemberCapacity,
+  getMemberRoleHistory,
   removeMember,
   getPaginatedAuditLogs,
 } from "../controllers/organizationController.js";
@@ -62,6 +66,39 @@ router.patch(
   requireOrgMembership,
   requirePermission("team_members", "change_role"),
   updateMemberRole,
+);
+
+router.patch(
+  "/:id/members/:userId/deactivate",
+  userAuth,
+  writeLimiter,
+  requireOrgMembership,
+  requirePermission("team_members", "remove"),
+  deactivateMember,
+);
+
+router.patch(
+  "/:id/members/:userId/reactivate",
+  userAuth,
+  writeLimiter,
+  requireOrgMembership,
+  requirePermission("team_members", "invite"),
+  reactivateMember,
+);
+
+router.patch(
+  "/:id/members/:userId/capacity",
+  userAuth,
+  writeLimiter,
+  requireOrgMembership,
+  updateMemberCapacity,
+);
+
+router.get(
+  "/:id/members/:userId/role-history",
+  userAuth,
+  requireOrgMembership,
+  getMemberRoleHistory,
 );
 
 router.delete(

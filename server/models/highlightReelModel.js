@@ -35,6 +35,9 @@ const highlightReelSchema = new mongoose.Schema(
           type: Number, // Start time in seconds
           required: true,
         },
+        endTime: {
+          type: Number, // End time in seconds
+        },
         speaker: {
           type: String,
           default: "Unknown",

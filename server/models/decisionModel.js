@@ -73,8 +73,20 @@ const decisionSchema = new mongoose.Schema(
     owner: { type: String, default: "" },
     status: {
       type: String,
-      enum: ["open", "in-progress", "resolved", "superseded"],
+      enum: [
+        "open",
+        "in-progress",
+        "resolved",
+        "superseded",
+        "passed",
+        "failed",
+        "vetoed",
+      ],
       default: "open",
+    },
+    consensusThreshold: {
+      type: Number,
+      default: 60,
     },
     sourceMeetingId: {
       type: mongoose.Schema.Types.ObjectId,

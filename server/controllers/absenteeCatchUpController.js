@@ -143,3 +143,35 @@ export const generateMeetingCatchUp = async (req, res) => {
       .json({ success: false, message: "Failed to generate meeting catch-up" });
   }
 };
+
+/**
+ * Organizer action: generate and deliver catch-up packs to meeting absentees.
+ */
+export const generateAndDeliverCatchUp = async (req, res) => {
+  try {
+    const meetingId = req.params.meetingId || req.body.meetingId;
+    const { absenteeIds } = req.body || {};
+    const organizerId = req.user._id || req.user.id;
+
+    if (!meetingId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "meetingId is required" });
+    }
+
+    const result = await AbsenteeCatchUpService.generateAndDeliverForMeeting(
+      meetingId,
+      absenteeIds,
+      organizerId,
+    );
+
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error("Error generating and delivering catch-up:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to generate and deliver catch-up",
+      error: error.message,
+    });
+  }
+};

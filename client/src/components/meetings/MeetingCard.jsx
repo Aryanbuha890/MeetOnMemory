@@ -383,11 +383,25 @@ const MeetingCard = ({
                 </span>
               ))}
               {meeting.tags.length > 3 && (
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 rounded text-xs">
-                  +{meeting.tags.length - 3}
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  +{meeting.tags.length - 3} more
                 </span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Custom Fields Badges */}
+        {meeting.customFields && meeting.customFields.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {meeting.customFields.slice(0, 3).map((field, index) => (
+              <span
+                key={field._id || index}
+                className="px-2 py-0.5 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-100 dark:border-purple-800 rounded text-xs font-medium"
+              >
+                {field.name || field.key}: {String(field.value)}
+              </span>
+            ))}
           </div>
         )}
 

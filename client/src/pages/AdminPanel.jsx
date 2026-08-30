@@ -158,6 +158,16 @@ const MODULES = [
     roles: ["admin", "owner", "compliance_officer"],
   },
   {
+    id: "dlpCompliance",
+    labelKey: "DLP Compliance",
+    descriptionKey:
+      "Scan transcripts for PII, secrets, and manage unmask audits",
+    icon: Shield,
+    iconBg: "bg-indigo-50 dark:bg-indigo-900/30",
+    iconColor: "text-indigo-600 dark:text-indigo-400",
+    roles: ["admin", "owner", "compliance_officer"],
+  },
+  {
     id: "resources",
     labelKey: "Physical Resources",
     descriptionKey: "Manage meeting rooms and office hardware",
@@ -814,6 +824,61 @@ const AdminPanel = () => {
                 userData?.role === "superadmin"
               }
             />
+          ) : activeModule === "dlpCompliance" ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Data Loss Prevention & Compliance
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Scan meeting transcripts for PII/secrets, view redaction
+                    logs, and process entity unmask requests.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/compliance/dlp")}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 cursor-pointer"
+                >
+                  <span>Open DLP Console</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div
+                  onClick={() => navigate("/compliance/dlp")}
+                  className="border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <h4 className="font-semibold text-slate-900 dark:text-white">
+                      Live PII & Secret Scanner
+                    </h4>
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    Test raw text or transcripts for API keys, passwords, JWT
+                    tokens, credit cards, and SSNs.
+                  </p>
+                </div>
+                <div
+                  onClick={() => navigate("/compliance/dlp")}
+                  className="border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <h4 className="font-semibold text-slate-900 dark:text-white">
+                      Audit Trail & Unmask Workflow
+                    </h4>
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    Review automated redactions and submit/review audited
+                    justifications for unmasking.
+                  </p>
+                </div>
+              </div>
+            </div>
           ) : activeModule === "reports" ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">

@@ -14,6 +14,7 @@ import {
   updateTranscriptSegment,
   persistCaptionSegments,
 } from "../controllers/transcriptController.js";
+import { searchGlobalTranscripts } from "../controllers/transcriptSearchController.js";
 
 const router = express.Router();
 
@@ -23,6 +24,9 @@ router.use(apiLimiter);
 // Mounted at /api/transcripts
 // Recording/live endpoints live under /api/meetings (see meetingRoutes.js).
 // Voice search lives under /api/search/voice (see searchRoutes.js).
+
+// Global search across all transcripts
+router.get("/search/global", userAuth, searchGlobalTranscripts);
 
 // Get transcript by meeting ID
 router.get(

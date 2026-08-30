@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { History, X, Globe, Mic } from "lucide-react";
+import { History, X, Globe, Mic, FileText } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import SearchBar from "../components/ai-search/SearchBar.jsx";
 import SearchFilters from "../components/ai-search/SearchFilters.jsx";
@@ -33,6 +33,50 @@ const DEFAULT_FILTERS = {
   meetingType: "",
   speaker: "",
   tag: "",
+  organizer: "",
+  department: "",
+};
+
+const CitationRenderer = ({ text, onCitationClick }) => {
+  if (!text) return null;
+
+  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    const matchIndex = match.index;
+    if (matchIndex > lastIndex) {
+      parts.push(text.substring(lastIndex, matchIndex));
+    }
+
+    const label = match[1];
+    const url = match[2];
+
+    parts.push(
+      <button
+        key={matchIndex}
+        type="button"
+        onClick={() => onCitationClick(url)}
+        className="mx-1 px-2.5 py-0.5 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-450 font-black hover:underline text-xs inline-flex items-center gap-1 cursor-pointer transition border border-indigo-500/10"
+      >
+        🔗 {label}
+      </button>,
+    );
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return (
+    <div className="prose dark:prose-invert max-w-none text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+      {parts}
+    </div>
+  );
 };
 
 const ResultModal = ({ result, onClose }) => {
@@ -209,6 +253,7 @@ const AiSearch = () => {
 
   const [query, setQuery] = useState(initial.query);
   const [results, setResults] = useState([]);
+  const [aiAnswer, setAiAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedResult, setSelectedResult] = useState(null);
@@ -263,8 +308,12 @@ const AiSearch = () => {
             meetingType: nextFilters.meetingType || undefined,
             speaker: nextFilters.speaker || undefined,
             tag: nextFilters.tag || undefined,
+            organizer: nextFilters.organizer || undefined,
+            department: nextFilters.department || undefined,
           });
-          setResults(res.results || res.data?.results || []);
+          const data = res?.data || res || {};
+          setResults(data.results || []);
+          setAiAnswer(data.aiAnswer || "");
         } else if (nextMode === "hybrid") {
           const res = await searchApi.hybridSearch({
             query: nextQuery,
@@ -274,8 +323,12 @@ const AiSearch = () => {
             meetingType: nextFilters.meetingType || undefined,
             speaker: nextFilters.speaker || undefined,
             tag: nextFilters.tag || undefined,
+            organizer: nextFilters.organizer || undefined,
+            department: nextFilters.department || undefined,
           });
-          setResults(res.results || res.data?.results || []);
+          const data = res?.data || res || {};
+          setResults(data.results || []);
+          setAiAnswer(data.aiAnswer || "");
         } else {
           const res = await searchApi.semanticSearch({
             query: nextQuery,
@@ -294,6 +347,7 @@ const AiSearch = () => {
           }
 
           setResults(sortedResults);
+          setAiAnswer("");
         }
 
         if (persistHistory) {
@@ -371,10 +425,6 @@ const AiSearch = () => {
   const handleOpenMeeting = (result) => {
     window.open(`/meeting/${result.meetingId || result._id}`, "_blank");
   };
-  const handleOpenMeetingById = (meetingId) => {
-    if (meetingId) window.open(`/meeting/${meetingId}`, "_blank");
-  };
-
   const handleCopySummary = async (result) => {
     const textToCopy = result.summary || result.transcript || "";
     if (textToCopy) {
@@ -385,6 +435,16 @@ const AiSearch = () => {
         console.error("Failed to copy:", err);
       }
     }
+  };
+
+  const handleOpenMeetingById = (meetingId) => {
+    if (meetingId) window.open(`/meeting/${meetingId}`, "_blank");
+  };
+
+  const handleCitationClick = (url) => {
+    const [meetingId, timeHash] = url.split("#");
+    const seconds = timeHash ? timeHash.replace("t=", "") : "0";
+    window.open(`/meeting/${meetingId}?t=${seconds}`, "_blank");
   };
 
   return (
@@ -403,7 +463,14 @@ const AiSearch = () => {
         />
 
         {/* Voice Search Toggle Header Action */}
-        <div className="w-full flex justify-end mb-3">
+        <div className="w-full flex justify-end gap-2 mb-3">
+          <a
+            href="/transcript-search"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold hover:bg-indigo-100 transition cursor-pointer"
+          >
+            <FileText className="w-4 h-4" />
+            Transcript Exact Match Search
+          </a>
           <button
             type="button"
             onClick={() => setShowVoiceBar((prev) => !prev)}
@@ -503,6 +570,18 @@ const AiSearch = () => {
 
         <div className="mt-10 w-full text-left">
           {loading && <SearchSkeleton />}
+
+          {!loading && aiAnswer && (
+            <div className="mb-6 p-6 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-slate-800/40 dark:to-indigo-950/20 border border-blue-100 dark:border-indigo-900/50 rounded-2xl shadow-sm">
+              <h3 className="text-sm font-black text-indigo-950 dark:text-indigo-300 mb-3 flex items-center gap-2">
+                ✨ AI Assistant Answer
+              </h3>
+              <CitationRenderer
+                text={aiAnswer}
+                onCitationClick={handleCitationClick}
+              />
+            </div>
+          )}
 
           {!loading && results.length > 0 && (
             <div className="space-y-5">

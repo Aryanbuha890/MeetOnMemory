@@ -4,19 +4,139 @@ import Membership from "../models/membershipModel.js";
 import Organization from "../models/organizationModel.js";
 import userModel from "../models/userModel.js";
 import AuditService from "./AuditService.js";
+import transporter from "../config/nodeMailer.js";
+import { MEMBERSHIP_REQUEST_DECISION_TEMPLATE } from "../config/emailTemplates.js";
+import { createNotification } from "./notificationService.js";
 import {
   AppError,
   NotFoundError,
   ForbiddenError,
   ValidationError,
 } from "../utils/errors.js";
+import { isSameOrganization } from "../utils/organizationScope.js";
 
 class MembershipRequestService {
+  /**
+   * Helper to send in-app notification and email on decision
+   */
+  static async _notifyDecision(request, status, reviewNotes) {
+    try {
+      const user = await userModel.findById(request.user).lean();
+      const orgName = request.organization?.name || "Organization";
+      const orgId = request.organization?._id || request.organization;
+
+      // In-app notification
+      createNotification(
+        String(request.user),
+        `Membership Request ${status === "approved" ? "Approved" : "Rejected"}`,
+        `Your request to join ${orgName} has been ${status}.${reviewNotes ? ` Note: ${reviewNotes}` : ""}`,
+        "organizations",
+        "/membership-requests",
+        "View Requests",
+        {
+          requestId: request._id,
+          organizationId: orgId,
+          status,
+          reviewNotes,
+        },
+      ).catch((err) =>
+        console.error("⚠️ In-app notification error:", err.message),
+      );
+
+      // Email notification
+      if (user?.email) {
+        const reviewNotesSection = reviewNotes
+          ? `<tr><td style="padding: 0 0 10px; font-size: 14px; line-height: 150%;"><strong>Admin Note:</strong> ${reviewNotes}</td></tr>`
+          : "";
+
+        const emailHtml = MEMBERSHIP_REQUEST_DECISION_TEMPLATE.replace(
+          "{{userName}}",
+          user.name || "there",
+        )
+          .replace("{{orgName}}", orgName)
+          .replace("{{status}}", status)
+          .replace("{{reviewNotesSection}}", reviewNotesSection);
+
+        transporter
+          .sendMail({
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: `Membership Request ${status === "approved" ? "Approved" : "Rejected"} - ${orgName}`,
+            html: emailHtml,
+          })
+          .catch((err) =>
+            console.error(
+              "⚠️ Background email transmission failed:",
+              err.message,
+            ),
+          );
+      }
+    } catch (err) {
+      console.error("⚠️ Failed to notify decision:", err.message);
+    }
+  }
+
   /**
    * Validate MongoDB ObjectId
    */
   static _isValidObjectId(id) {
     return mongoose.Types.ObjectId.isValid(id);
+  }
+
+  /**
+   * Add a comment to a membership request
+   */
+  static async addComment(userId, requestId, text, userOrgId = null) {
+    if (!this._isValidObjectId(requestId)) {
+      throw new ValidationError("Invalid membership request ID.");
+    }
+    if (!text || !String(text).trim()) {
+      throw new ValidationError("Comment text is required.");
+    }
+
+    const cleanRequestId = new mongoose.Types.ObjectId(String(requestId));
+    const request =
+      await MembershipRequest.findById(cleanRequestId).populate("organization");
+
+    if (!request) {
+      throw new NotFoundError("Membership request not found.");
+    }
+
+    if (userOrgId && !isSameOrganization(request.organization, userOrgId)) {
+      throw new ForbiddenError("Not authorized to comment on this request.");
+    }
+
+    const isRequester = request.user.toString() === userId.toString();
+    const isOwner =
+      request.organization?.owner?.toString() === userId.toString();
+
+    let isAdmin = false;
+    if (request.organization?._id) {
+      const membership = await Membership.findOne({
+        user: userId,
+        organization: request.organization._id,
+        role: "admin",
+        status: "active",
+      }).lean();
+      if (membership) isAdmin = true;
+    }
+
+    if (!isRequester && !isOwner && !isAdmin) {
+      throw new ForbiddenError("Not authorized to comment on this request.");
+    }
+
+    const comment = {
+      author: new mongoose.Types.ObjectId(String(userId)),
+      text: String(text).trim().substring(0, 1000),
+      createdAt: new Date(),
+    };
+
+    request.comments.push(comment);
+    await request.save();
+
+    await request.populate("comments.author", "name email profilePic");
+
+    return request;
   }
 
   /**
@@ -98,7 +218,13 @@ class MembershipRequestService {
       String(organizationId),
     );
 
-    const allowedStatuses = ["pending", "approved", "rejected", "cancelled"];
+    const allowedStatuses = [
+      "pending",
+      "approved",
+      "rejected",
+      "cancelled",
+      "expired",
+    ];
     const validStatus =
       status && allowedStatuses.includes(status) ? status : null;
     if (status && !validStatus) {
@@ -144,6 +270,7 @@ class MembershipRequestService {
 
     const requests = await MembershipRequest.find(filter)
       .populate("user", "name email profilePic isAccountVerified")
+      .populate("comments.author", "name email profilePic")
       .sort(sortObj)
       .skip(skip)
       .limit(limitNum)
@@ -184,6 +311,7 @@ class MembershipRequestService {
   static async getUserRequests(userId) {
     const requests = await MembershipRequest.find({ user: userId })
       .populate("organization", "name slug description logo")
+      .populate("comments.author", "name email profilePic")
       .sort({ createdAt: -1 })
       .lean();
     return requests;
@@ -270,6 +398,8 @@ class MembershipRequestService {
       details: { userId: request.user },
     });
 
+    this._notifyDecision(request, "approved", request.reviewNotes);
+
     return { request, membership: newMembership };
   }
 
@@ -318,6 +448,8 @@ class MembershipRequestService {
       organizationId: request.organization._id,
       details: { userId: request.user, reviewNotes },
     });
+
+    this._notifyDecision(request, "rejected", request.reviewNotes);
 
     return { request };
   }
@@ -449,6 +581,8 @@ class MembershipRequestService {
           details: { userId: request.user },
         });
 
+        this._notifyDecision(request, "approved", request.reviewNotes);
+
         results.push({
           requestId: request._id,
           membershipId: newMembership._id,
@@ -537,6 +671,8 @@ class MembershipRequestService {
         organizationId: request.organization._id,
         details: { userId: request.user, reviewNotes },
       });
+
+      this._notifyDecision(request, "rejected", request.reviewNotes);
 
       results.push({ requestId: request._id, status: "rejected" });
     }

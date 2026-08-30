@@ -44,6 +44,9 @@ const MeetingEffectiveness = lazy(
 const MeetingRecycleBin = lazy(() => import("../pages/MeetingRecycleBin.jsx"));
 const MeetingRoom = lazy(() => import("../pages/MeetingRoom.jsx"));
 const TranscriptViewer = lazy(() => import("../pages/TranscriptViewer.jsx"));
+const TranscriptSearchPage = lazy(
+  () => import("../pages/TranscriptSearchPage.jsx"),
+);
 const TeamMembers = lazy(() => import("../pages/TeamMembers.jsx"));
 const Profile = lazy(() => import("../pages/Profile.jsx"));
 const Calendar = lazy(() => import("../pages/Calendar.jsx"));
@@ -66,6 +69,9 @@ const DecisionDependencyMatrix = lazy(
 );
 const DecisionLog = lazy(() => import("../pages/DecisionLog.jsx"));
 const PolicyCompliance = lazy(() => import("../pages/PolicyCompliance.jsx"));
+const DlpComplianceConsole = lazy(
+  () => import("../pages/DlpComplianceConsole.jsx"),
+);
 const Settings = lazy(() => import("../pages/Settings.jsx"));
 const RiskRegister = lazy(() => import("../pages/RiskRegister.jsx"));
 const MembershipRequests = lazy(
@@ -90,6 +96,18 @@ const RsvpInbox = lazy(() => import("../pages/RsvpInbox.jsx"));
 const MeetingCostAnalytics = lazy(
   () => import("../pages/MeetingCostAnalytics.jsx"),
 );
+const MeetingCostCalculatorPage = lazy(
+  () => import("../pages/MeetingCostCalculator.jsx"),
+);
+const MeetingROIDashboard = lazy(
+  () => import("../pages/MeetingROIDashboard.jsx"),
+);
+const AiMeetingNotesDashboard = lazy(
+  () => import("../pages/AiMeetingNotesDashboard.jsx"),
+);
+const MeetingInsightsDashboard = lazy(
+  () => import("../pages/MeetingInsightsDashboard.jsx"),
+);
 const EnterpriseMeetingCostEngine = lazy(
   () => import("../pages/EnterpriseMeetingCostEngine.jsx"),
 );
@@ -101,6 +119,9 @@ const MeetingHealthDashboard = lazy(
 );
 const AutomationRules = lazy(() => import("../pages/AutomationRules.jsx"));
 const TopicExplorer = lazy(() => import("../pages/TopicExplorer.jsx"));
+const TopicEvolutionExplorerPage = lazy(
+  () => import("../pages/TopicEvolutionExplorer.jsx"),
+);
 const TopicAnalyticsDashboard = lazy(
   () => import("../pages/TopicAnalyticsDashboard.jsx"),
 );
@@ -109,6 +130,9 @@ const ParkingLotBacklogPage = lazy(
 );
 const ConflictResolution = lazy(
   () => import("../pages/ConflictResolution.jsx"),
+);
+const SpeakingTimeDashboard = lazy(
+  () => import("../pages/SpeakingTimeDashboard.jsx"),
 );
 const SpeakingTimeTrends = lazy(
   () => import("../pages/SpeakingTimeTrends.jsx"),
@@ -135,6 +159,9 @@ const SeriesRetrospective = lazy(
   () => import("../pages/SeriesRetrospective.jsx"),
 );
 const MeetingSeriesList = lazy(() => import("../pages/MeetingSeriesList.jsx"));
+const MeetingSeriesEvolution = lazy(
+  () => import("../pages/MeetingSeriesEvolution.jsx"),
+);
 const DataRetentionSettings = lazy(
   () => import("../pages/DataRetentionSettings.jsx"),
 );
@@ -159,14 +186,66 @@ const IntegrationMarketplaceHub = lazy(
   () => import("../pages/IntegrationMarketplaceHub.jsx"),
 );
 const SentimentTrends = lazy(() => import("../pages/SentimentTrends.jsx"));
+const RiskRegister = lazy(() => import("../pages/RiskRegister.jsx"));
 const AsyncMeetingsDashboard = lazy(
   () => import("../pages/AsyncMeetingsDashboard.jsx"),
 );
 const MeetingPlaybooks = lazy(() => import("../pages/MeetingPlaybooks.jsx"));
 const TopicIntelligence = lazy(() => import("../pages/TopicIntelligence.jsx"));
+const SessionGallery = lazy(() => import("../pages/SessionGallery.jsx"));
 
 const ProtectedRoutes = (
   <React.Fragment>
+    <Route
+      path="/risks"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <RiskRegister />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/risk-register"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <RiskRegister />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/risks/matrix"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <RiskRegister />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/session-cards"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <SessionGallery />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/session-gallery"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <SessionGallery />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
     <Route
       path="/topics/analytics"
       element={
@@ -193,6 +272,26 @@ const ProtectedRoutes = (
         <ProtectedRoute>
           <RouteErrorBoundary>
             <TopicIntelligence />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/topic-evolution"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <TopicEvolutionExplorerPage />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/topics/evolution"
+      element={
+        <ProtectedRoute>
+          <RouteErrorBoundary>
+            <TopicEvolutionExplorerPage />
           </RouteErrorBoundary>
         </ProtectedRoute>
       }
@@ -259,6 +358,14 @@ const ProtectedRoutes = (
       element={
         <ProtectedRoute resource="meetings" action="view">
           <MeetingSeriesList />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/meeting-series/:id/evolution"
+      element={
+        <ProtectedRoute resource="meetings" action="view">
+          <MeetingSeriesEvolution />
         </ProtectedRoute>
       }
     />
@@ -633,7 +740,25 @@ const ProtectedRoutes = (
       }
     />
     <Route
+      path="/transcript-search"
+      element={
+        <ProtectedRoute resource="meetings" action="view">
+          <TranscriptSearchPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="/meeting/:id"
+      element={
+        <ProtectedRoute resource="meetings" action="view">
+          <RouteErrorBoundary section="Meeting Details">
+            <MeetingDetails />
+          </RouteErrorBoundary>
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/meetings/:id"
       element={
         <ProtectedRoute resource="meetings" action="view">
           <RouteErrorBoundary section="Meeting Details">
@@ -781,6 +906,30 @@ const ProtectedRoutes = (
       }
     />
     <Route
+      path="/compliance/dlp"
+      element={
+        <ProtectedRoute
+          resource="admin_panel"
+          action="view"
+          forbiddenFallback={<AccessDenied />}
+        >
+          <DlpComplianceConsole />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dlp-compliance"
+      element={
+        <ProtectedRoute
+          resource="admin_panel"
+          action="view"
+          forbiddenFallback={<AccessDenied />}
+        >
+          <DlpComplianceConsole />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="/sla-compliance"
       element={
         <ProtectedRoute resource="reports" action="view">
@@ -853,6 +1002,62 @@ const ProtectedRoutes = (
       }
     />
     <Route
+      path="/meeting-cost-calculator"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <MeetingCostCalculatorPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/analytics/meeting-cost-calculator"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <MeetingCostCalculatorPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/meeting-roi-dashboard"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <MeetingROIDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/analytics/meeting-roi"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <MeetingROIDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/ai-notes-dashboard"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <AiMeetingNotesDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/ai-notes"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <AiMeetingNotesDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/meeting-insights"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <MeetingInsightsDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="/meeting-cost-engine"
       element={
         <ProtectedRoute resource="reports" action="view">
@@ -889,6 +1094,14 @@ const ProtectedRoutes = (
       element={
         <ProtectedRoute resource="reports" action="view">
           <MeetingHealthDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/speaking-time"
+      element={
+        <ProtectedRoute resource="organizations" action="view">
+          <SpeakingTimeDashboard />
         </ProtectedRoute>
       }
     />

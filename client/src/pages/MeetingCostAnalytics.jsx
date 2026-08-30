@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   BarChart,
@@ -15,6 +16,7 @@ import {
 } from "recharts";
 import {
   BarChart3,
+  Calculator,
   Clock3,
   Download,
   Loader2,
@@ -249,6 +251,13 @@ const MeetingCostAnalytics = () => {
               />
               Refresh
             </button>
+            <Link
+              to="/meeting-cost-calculator"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors"
+            >
+              <Calculator className="h-4 w-4" aria-hidden="true" />
+              Cost Calculator
+            </Link>
             <button
               type="button"
               onClick={handleExport}

@@ -18,9 +18,9 @@ vi.mock("../services/MeetingService.js", () => {
   return {
     ...actual,
     createMeeting: async (uploaderId, orgId, data) => {
-      const { default: MeetingStorageService } =
+      const { createMeetingRecord } =
         await import("../services/MeetingStorageService.js");
-      return await MeetingStorageService.createMeetingRecord({
+      return await createMeetingRecord({
         uploadedBy: uploaderId,
         organization: orgId || null,
         title: data.title.trim(),

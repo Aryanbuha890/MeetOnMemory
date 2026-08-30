@@ -14,7 +14,7 @@ const meetingRsvpSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "accepted", "declined", "tentative"],
+      enum: ["pending", "accepted", "declined", "tentative", "waitlisted"],
       default: "pending",
     },
     declineReason: {

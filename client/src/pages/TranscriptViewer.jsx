@@ -5,7 +5,7 @@ import React, {
   useContext,
   useRef,
 } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import api from "../services/apiClient.js";
 import { speakerMappingApi } from "../services/speakerMappingApi.js";
@@ -56,10 +56,15 @@ const HighlightedText = ({ text, query }) => {
 const TranscriptViewer = () => {
   const { meetingId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const queryParams = new URLSearchParams(location.search);
+  const searchHighlight = queryParams.get("highlight");
+  const targetSegment = queryParams.get("segment");
 
   const [transcript, setTranscript] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchHighlight || "");
   const [searchResults, setSearchResults] = useState([]);
   const [highlightedSegment, setHighlightedSegment] = useState(null);
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -82,6 +87,68 @@ const TranscriptViewer = () => {
   const [editSegmentStartTime, setEditSegmentStartTime] = useState("");
   const [editSegmentEndTime, setEditSegmentEndTime] = useState("");
   const [isSavingSegment, setIsSavingSegment] = useState(false);
+
+  const [isAnonymizing, setIsAnonymizing] = useState(false);
+  const [revealOriginal, setRevealOriginal] = useState(false);
+  const [originalData, setOriginalData] = useState(null);
+
+  const handleAnonymize = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to anonymize this meeting? This will scrub PII from the public transcript/summary, store the unredacted originals encrypted, and cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    setIsAnonymizing(true);
+    try {
+      const response = await api.post("/api/meetings/anonymize", { meetingId });
+      if (response.data?.success) {
+        toast.success("Meeting anonymized and PII scrubbed successfully!");
+        setRevealOriginal(false);
+        setOriginalData(null);
+        fetchTranscript();
+      }
+    } catch (err) {
+      console.error("Anonymization failed:", err);
+      toast.error(err.response?.data?.message || "Failed to anonymize meeting");
+    } finally {
+      setIsAnonymizing(false);
+    }
+  };
+
+  const handleRevealOriginalToggle = async () => {
+    if (revealOriginal) {
+      setRevealOriginal(false);
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "WARNING: You are about to decrypt and reveal the original unredacted transcript containing potential PII data (e.g. Credit Cards, API Keys, Emails, Phone Numbers). Do you wish to proceed?",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await api.get(`/api/meetings/${meetingId}/raw`);
+      if (response.data?.success) {
+        setOriginalData(response.data.original);
+        setRevealOriginal(true);
+        toast.success(
+          "Original unredacted contents decrypted and revealed successfully.",
+        );
+      }
+    } catch (err) {
+      console.error("Failed to decrypt original contents:", err);
+      toast.error(
+        err.response?.data?.message ||
+          "Decryption failed. Ensure you have the correct privileges.",
+      );
+    }
+  };
 
   const parseTimestampToSeconds = (timeStr) => {
     if (typeof timeStr === "number") return timeStr;
@@ -272,6 +339,16 @@ const TranscriptViewer = () => {
     fetchTranscript();
   }, [fetchTranscript]);
 
+  useEffect(() => {
+    if (!loading && transcript && targetSegment) {
+      const idx = parseInt(targetSegment, 10);
+      if (!isNaN(idx)) {
+        setTimeout(() => scrollToSegment(idx), 300);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, transcript, targetSegment]);
+
   const handleSpeakerChange = async (index, oldSpeaker) => {
     if (!newSpeakerName.trim()) return;
 
@@ -421,8 +498,22 @@ const TranscriptViewer = () => {
 
   const meeting = transcript.meeting;
 
+  const isAdminOrOwner =
+    userData && (userData.role === "admin" || userData.role === "owner");
+
+  const displayedSegments = (() => {
+    if (revealOriginal && originalData?.transcriptSegments) {
+      try {
+        return JSON.parse(originalData.transcriptSegments);
+      } catch (e) {
+        console.error("Failed to parse original transcriptSegments:", e);
+      }
+    }
+    return transcript?.segments || [];
+  })();
+
   const activePlaybackSegment = (() => {
-    const segs = transcript.segments || [];
+    const segs = displayedSegments;
     if (!segs.length) return null;
     const idx = segs.findIndex((s) => {
       const start = s.startTime || 0;
@@ -468,6 +559,14 @@ const TranscriptViewer = () => {
                         <Lock size={12} /> E2EE
                       </span>
                     )}
+                    {meeting?.isRedacted && (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-250 dark:border-amber-800"
+                        data-testid="redacted-badge"
+                      >
+                        <Shield size={12} /> PII Masked/Scrubbed
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
                     <span className="flex items-center gap-1">
@@ -492,6 +591,44 @@ const TranscriptViewer = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                {isAdminOrOwner && !meeting?.isRedacted && (
+                  <button
+                    onClick={handleAnonymize}
+                    disabled={isAnonymizing}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-semibold rounded-lg border border-red-200 dark:border-red-800/50 transition-colors disabled:opacity-50"
+                    title="Anonymize & scrub PII"
+                  >
+                    {isAnonymizing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Shield size={14} />
+                    )}
+                    <span>Anonymize</span>
+                  </button>
+                )}
+
+                {isAdminOrOwner && meeting?.isRedacted && (
+                  <button
+                    onClick={handleRevealOriginalToggle}
+                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                      revealOriginal
+                        ? "bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
+                        : "bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/50"
+                    }`}
+                    title={
+                      revealOriginal
+                        ? "Hide original unredacted text"
+                        : "Reveal original unredacted text"
+                    }
+                    data-testid="reveal-original-btn"
+                  >
+                    <Sparkles size={14} />
+                    <span>
+                      {revealOriginal ? "Hide Original" : "Reveal Original"}
+                    </span>
+                  </button>
+                )}
+
                 {isEncrypted && (
                   <button
                     onClick={() => setShowKeyModal(true)}
@@ -682,7 +819,7 @@ const TranscriptViewer = () => {
                       "No transcript text content currently compiled."}
                   </p>
                 </div>
-              ) : transcript.segments?.length === 0 ? (
+              ) : displayedSegments?.length === 0 ? (
                 <div className="bg-white dark:bg-slate-800 rounded-lg p-8 text-center">
                   <FileText size={48} className="mx-auto text-gray-400 mb-4" />
                   <p className="text-gray-600 dark:text-gray-400">
@@ -690,7 +827,7 @@ const TranscriptViewer = () => {
                   </p>
                 </div>
               ) : (
-                transcript.segments.map((segment, index) => (
+                displayedSegments.map((segment, index) => (
                   <div
                     key={index}
                     id={`segment-${index}`}

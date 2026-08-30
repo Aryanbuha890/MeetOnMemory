@@ -1,5 +1,6 @@
 import Transcript from "../models/transcriptModel.js";
 import RecordingSession from "../models/RecordingSession.js";
+import SpeakerMapping from "../models/speakerMappingModel.js";
 import { translateContent } from "../services/translationService.js";
 import Meeting from "../models/meetingModel.js";
 import Organization from "../models/organizationModel.js";
@@ -33,6 +34,86 @@ const openai = new OpenAI({
 
 /** In-progress statuses: "recording" (session) + legacy "active" (live chunks). */
 const IN_PROGRESS_STATUSES = ["recording", "active"];
+
+/**
+ * Helper to resolve accurate speaker attribution for live transcript segments/chunks.
+ * Checks payload speaker inputs, existing SpeakerMappings for the meeting, and authenticated user metadata.
+ */
+async function resolveSpeakerAttribution(meetingId, body = {}, user = null) {
+  const rawLabel = String(
+    body?.speaker || body?.speakerName || body?.speakerLabel || "",
+  ).trim();
+  const rawSpeakerId = String(body?.speakerId || "").trim();
+
+  let resolvedSpeaker = rawLabel;
+  let resolvedSpeakerId = rawSpeakerId || null;
+
+  // 1. Check if an explicit SpeakerMapping exists for this meeting matching rawLabel or rawSpeakerId
+  if (meetingId && (rawLabel || rawSpeakerId)) {
+    try {
+      const mapping = await SpeakerMapping.findOne({
+        meeting: meetingId,
+        $or: [
+          ...(rawLabel ? [{ originalLabel: rawLabel }] : []),
+          ...(rawSpeakerId ? [{ originalLabel: rawSpeakerId }] : []),
+        ],
+      });
+      if (mapping && mapping.mappedName) {
+        return {
+          speaker: mapping.mappedName,
+          speakerId: resolvedSpeakerId || mapping.originalLabel,
+        };
+      }
+    } catch {
+      // Continue to next resolution strategy
+    }
+  }
+
+  // 2. If a raw speaker label was provided, use it
+  if (resolvedSpeaker) {
+    return {
+      speaker: resolvedSpeaker,
+      speakerId: resolvedSpeakerId,
+    };
+  }
+
+  // 3. Fallback to authenticated user (the person recording / sending audio chunks)
+  if (user) {
+    const userName = user.name || user.firstName || user.email;
+    const userId = (user.id || user._id)?.toString();
+    if (userName) {
+      if (meetingId) {
+        try {
+          const mapping = await SpeakerMapping.findOne({
+            meeting: meetingId,
+            $or: [
+              { originalLabel: userName },
+              ...(userId ? [{ originalLabel: userId }] : []),
+            ],
+          });
+          if (mapping && mapping.mappedName) {
+            return {
+              speaker: mapping.mappedName,
+              speakerId: userId || null,
+            };
+          }
+        } catch {
+          // ignore
+        }
+      }
+      return {
+        speaker: userName,
+        speakerId: userId || null,
+      };
+    }
+  }
+
+  // 4. Default fallback when no speaker info or user context is available
+  return {
+    speaker: "Unknown",
+    speakerId: resolvedSpeakerId,
+  };
+}
 
 const findInProgressTranscript = (meetingId) =>
   Transcript.findOne({
@@ -386,18 +467,25 @@ export const uploadTranscriptChunk = async (req, res) => {
     tempFilePath = path.join(os.tmpdir(), tempFileName);
     fs.writeFileSync(tempFilePath, req.file.buffer);
 
+    const fileStream = fs.createReadStream(tempFilePath);
+    fileStream.on("error", () => {});
+
     // Call OpenAI Whisper
     const transcription = await openai.audio.transcriptions.create({
-      file: fs.createReadStream(tempFilePath),
+      file: fileStream,
       model: "whisper-1",
     });
 
     const newText = transcription.text;
 
     if (newText && newText.trim().length > 0) {
+      const { speaker: attrSpeaker, speakerId: attrSpeakerId } =
+        await resolveSpeakerAttribution(meetingId, req.body, req.user);
+
       const segment = {
         text: newText,
-        speaker: "Speaker", // Simple chunk logic might not diarize accurately
+        speaker: attrSpeaker,
+        speakerId: attrSpeakerId,
         startTime: transcript.duration,
         endTime: transcript.duration + 5, // Rough estimate
         confidence: 1.0,
@@ -414,8 +502,12 @@ export const uploadTranscriptChunk = async (req, res) => {
     }
 
     // Clean up temp file
-    if (fs.existsSync(tempFilePath)) {
-      fs.unlinkSync(tempFilePath);
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch {
+        // ignore temp file cleanup errors
+      }
     }
 
     // Update RecordingSession metric
@@ -442,15 +534,24 @@ export const uploadTranscriptChunk = async (req, res) => {
       console.warn("Failed to update RecordingSession for chunk:", sessionErr);
     }
 
+    const lastAddedSegment =
+      transcript.segments[transcript.segments.length - 1] || null;
+
     res.status(200).json({
       success: true,
       text: newText,
       fullText: transcript.fullText,
+      segment: lastAddedSegment,
+      speaker: lastAddedSegment?.speaker || "Unknown",
     });
   } catch (error) {
     console.error("Error processing transcript chunk:", error);
     if (tempFilePath && fs.existsSync(tempFilePath)) {
-      fs.unlinkSync(tempFilePath);
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch {
+        // ignore error during cleanup
+      }
     }
 
     try {
@@ -1554,8 +1655,12 @@ export const persistCaptionSegments = async (req, res) => {
       const text = (raw.text || "").trim();
       if (!text) continue;
 
-      const speaker = raw.speaker || "Speaker";
-      const speakerId = raw.speakerId || null;
+      const { speaker: attrSpeaker, speakerId: attrSpeakerId } =
+        await resolveSpeakerAttribution(meetingId, raw, user);
+
+      const speaker = attrSpeaker;
+      const speakerId =
+        attrSpeakerId || (raw.speakerId ? String(raw.speakerId) : null);
       const startTime =
         typeof raw.startTime === "number"
           ? raw.startTime

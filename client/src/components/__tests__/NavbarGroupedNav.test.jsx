@@ -41,7 +41,7 @@ vi.mock("react-i18next", () => ({
         "navbar.attendanceAnalytics": "Attendance Analytics",
         "navbar.costAnalytics": "Meeting Cost Analytics",
         "navbar.meetingHealth": "Meeting Health",
-        "navbar.speakingTime": "Speaking Time Trends",
+        "navbar.speakingTime": "Speaking Time Analytics",
         "navbar.topicExplorer": "Topic Explorer",
         "navbar.actionItemAnalytics": "Action Item Analytics",
         "navbar.knowledgeGraph": "Knowledge Graph",
@@ -197,7 +197,7 @@ describe("Navbar Grouped Navigation & Feature Route Discovery (#2024)", () => {
       screen.getByRole("menuitem", { name: /meeting health/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("menuitem", { name: /speaking time trends/i }),
+      screen.getByRole("menuitem", { name: /speaking time analytics/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("menuitem", { name: /topic explorer/i }),

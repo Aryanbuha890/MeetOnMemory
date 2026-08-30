@@ -255,6 +255,31 @@ const MeetingMetadata = ({ meeting }) => {
         </div>
       )}
 
+      {/* Custom Fields Badges Display */}
+      {meeting.customFields && meeting.customFields.length > 0 && (
+        <div
+          data-testid="meeting-custom-fields-display"
+          className="mt-4 pt-4 border-t border-gray-200"
+        >
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+            Custom Metadata
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {meeting.customFields.map((field, index) => (
+              <div
+                key={field._id || index}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-800 border border-purple-200 text-xs font-medium rounded-lg"
+              >
+                <span className="font-semibold">
+                  {field.name || field.key}:
+                </span>
+                <span>{String(field.value)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {meeting.organization && (
         <div className="mt-6 pt-4 border-t border-gray-200">
           <CustomFieldsEditor

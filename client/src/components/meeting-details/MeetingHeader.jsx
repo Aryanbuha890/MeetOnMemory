@@ -9,6 +9,7 @@ import {
   Bookmark,
   MessageSquare,
   Link2,
+  Copy,
   BellOff,
   Bell,
   ShieldAlert,
@@ -88,6 +89,13 @@ const MeetingHeader = ({ meeting, onShare, onShareInvite, onPresent }) => {
     } finally {
       setMuteLoading(false);
     }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => toast.success("Link copied!"))
+      .catch(() => toast.error("Failed to copy link"));
   };
 
   if (!meeting) return null;
@@ -262,6 +270,13 @@ const MeetingHeader = ({ meeting, onShare, onShareInvite, onPresent }) => {
               <Link2 className="w-4 h-4" /> Share Invite
             </button>
           )}
+          <button
+            onClick={handleCopyLink}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+            title="Copy link to clipboard"
+          >
+            <Copy className="w-4 h-4" /> Copy Link
+          </button>
           <button
             onClick={onShare}
             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 rounded-lg text-sm font-medium transition-colors"

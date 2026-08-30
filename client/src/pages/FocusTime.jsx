@@ -24,6 +24,8 @@ const FocusTime = () => {
   const [endTime, setEndTime] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
   const [daysOfWeek, setDaysOfWeek] = useState([]);
+  const [policy, setPolicy] = useState("warn");
+  const [allowOverride, setAllowOverride] = useState(true);
 
   const DAYS = [
     "Sunday",
@@ -66,6 +68,8 @@ const FocusTime = () => {
         endTime: new Date(endTime).toISOString(),
         isRecurring,
         daysOfWeek: isRecurring ? daysOfWeek : [],
+        policy,
+        allowOverride: policy === "block" ? false : allowOverride,
       };
 
       await focusTimeApi.createBlock(data);
@@ -79,6 +83,8 @@ const FocusTime = () => {
       setEndTime("");
       setIsRecurring(false);
       setDaysOfWeek([]);
+      setPolicy("warn");
+      setAllowOverride(true);
     } catch {
       toast.error("Error creating focus block.");
     }
@@ -205,6 +211,16 @@ const FocusTime = () => {
                         {block.isRecurring && (
                           <span className="flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
                             <RefreshCw size={12} /> Recurring
+                          </span>
+                        )}
+                        {block.policy === "block" ||
+                        block.allowOverride === false ? (
+                          <span className="flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 dark:bg-red-950/40 dark:text-red-300 px-2.5 py-1 rounded-full">
+                            Strict Block
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-1 rounded-full">
+                            Warn with Override
                           </span>
                         )}
                       </div>
@@ -339,6 +355,51 @@ const FocusTime = () => {
                   </div>
                 </div>
               )}
+
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Conflict Policy
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="policy"
+                      value="warn"
+                      checked={policy === "warn"}
+                      onChange={() => setPolicy("warn")}
+                      className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-800">
+                        Warn & Allow Override
+                      </span>
+                      <p className="text-xs text-gray-500">
+                        Warns scheduling users and requires an override reason.
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="policy"
+                      value="block"
+                      checked={policy === "block"}
+                      onChange={() => setPolicy("block")}
+                      className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-800">
+                        Strict Block (No Overrides)
+                      </span>
+                      <p className="text-xs text-gray-500">
+                        Completely prevents any meeting from being scheduled
+                        during this focus time.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
 
               <div className="pt-4 flex justify-end gap-3">
                 <button

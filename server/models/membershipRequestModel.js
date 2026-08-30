@@ -21,9 +21,33 @@ const membershipRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "cancelled"],
+      enum: ["pending", "approved", "rejected", "cancelled", "expired"],
       default: "pending",
     },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days default
+      index: true,
+    },
+    comments: [
+      {
+        author: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "user",
+          required: true,
+        },
+        text: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: [1000, "Comment cannot exceed 1000 characters"],
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     reviewedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",

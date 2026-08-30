@@ -27,6 +27,12 @@ vi.mock("react-toastify", () => ({
   },
 }));
 
+vi.mock("@headlessui/react", () => {
+  const Dialog = ({ open, children }) => (open ? <div>{children}</div> : null);
+  Dialog.Title = ({ children, ...props }) => <h3 {...props}>{children}</h3>;
+  return { Dialog };
+});
+
 const defaultPreferences = {
   deliveryTiming: "immediate",
   includeSummary: true,
@@ -50,13 +56,14 @@ const openPreview = async (html) => {
   fireEvent.click(screen.getByRole("button", { name: /preview email/i }));
 
   await waitFor(() => {
+    expect(screen.getByTestId("sandboxed-html-preview")).toBeInTheDocument();
     expect(screen.getByTitle("Email Preview")).toBeInTheDocument();
   });
 
   return screen.getByTitle("Email Preview");
 };
 
-describe("RecapPreferences HTML preview sanitization (#1391)", () => {
+describe("RecapPreferences HTML preview sanitization (#1391, #2451)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getRecapPreferences.mockResolvedValue(defaultPreferences);
@@ -110,5 +117,25 @@ describe("RecapPreferences HTML preview sanitization (#1391)", () => {
     const srcDoc = iframe.getAttribute("srcdoc") || "";
     expect(srcDoc).toContain("Open recap");
     expect(srcDoc).not.toMatch(/javascript:/i);
+  });
+
+  it("shows recovery UI when recap preview generation fails", async () => {
+    previewRecapEmail.mockRejectedValueOnce(new Error("Preview failed"));
+    render(<RecapPreferences />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /preview email/i }),
+      ).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /preview email/i }));
+
+    expect(
+      await screen.findByTestId("sandboxed-html-preview-error"),
+    ).toHaveTextContent("Failed to generate preview");
+    expect(
+      screen.getByRole("button", { name: /try again/i }),
+    ).toBeInTheDocument();
   });
 });

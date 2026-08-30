@@ -1,4 +1,5 @@
 // server/tests/escalationController.test.js
+import { jest } from "@jest/globals";
 import EscalationPolicy from "../models/escalationPolicyModel.js";
 import {
   sanitizePolicyInput,
@@ -9,6 +10,8 @@ import {
   createEscalationPolicy,
   updateEscalationPolicy,
   deleteEscalationPolicy,
+  getEscalationHistory,
+  triggerManualEscalation,
 } from "../controllers/escalationController.js";
 
 describe("Escalation Controller Security Tests", () => {
@@ -209,6 +212,49 @@ describe("Escalation Controller Security Tests", () => {
         organization: orgA,
       });
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe("Run History & Manual Trigger Authorization (#2456)", () => {
+    it("getEscalationHistory should restrict lookup to user organization", async () => {
+      const req = {
+        user: { organization: orgA },
+        query: { organizationId: orgB },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      await getEscalationHistory(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringMatching(/Unauthorized cross-tenant/i),
+        }),
+      );
+    });
+
+    it("triggerManualEscalation should reject non-admin users with 403", async () => {
+      const req = {
+        user: { organization: orgA, role: "member" },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      await triggerManualEscalation(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringMatching(/Admin privileges required/i),
+        }),
+      );
     });
   });
 

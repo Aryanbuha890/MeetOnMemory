@@ -4,7 +4,9 @@ import { toast } from "react-toastify";
 import {
   getGuestMeetingData,
   addGuestComment,
+  submitGuestFeedback,
 } from "../services/guestAccessApi";
+import { Star } from "lucide-react";
 
 const GuestMeetingView = () => {
   const { token } = useParams();
@@ -15,12 +17,23 @@ const GuestMeetingView = () => {
   const [comment, setComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
+  // Guest Feedback form state
+  const [rating, setRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const result = await getGuestMeetingData(token);
         setData(result);
+
+        if (result.guestEmail) {
+          setGuestName(result.guestEmail);
+        }
 
         // Determine default tab based on permissions
         if (result.permissions.includes("view_summary") && result.aiSummary)
@@ -57,6 +70,24 @@ const GuestMeetingView = () => {
       toast.error(err.response?.data?.error || "Failed to add comment");
     } finally {
       setSubmittingComment(false);
+    }
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setSubmittingFeedback(true);
+      await submitGuestFeedback(token, {
+        rating,
+        comments: feedbackComment,
+        guestName: guestName || data?.guestEmail || "Anonymous Guest",
+      });
+      toast.success("Thank you for your feedback!");
+      setFeedbackSubmitted(true);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to submit feedback");
+    } finally {
+      setSubmittingFeedback(false);
     }
   };
 
@@ -188,8 +219,66 @@ const GuestMeetingView = () => {
           </div>
         </div>
 
-        {canComment && (
-          <div className="w-full md:w-80 space-y-6">
+        <div className="w-full md:w-80 space-y-6">
+          {/* Guest Feedback Widget */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="font-bold text-gray-900 mb-1">Session Feedback</h3>
+            <p className="text-xs text-gray-500 mb-3">
+              Rate your experience for the meeting host.
+            </p>
+            {feedbackSubmitted ? (
+              <p className="text-xs font-semibold text-green-700 bg-green-50 p-3 rounded-md">
+                ✓ Feedback submitted. Thank you!
+              </p>
+            ) : (
+              <form onSubmit={handleFeedbackSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Rating (1-5 Stars)
+                  </label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        className="p-1 focus:outline-none"
+                      >
+                        <Star
+                          className={`w-5 h-5 ${
+                            star <= rating
+                              ? "text-amber-400 fill-amber-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Comments / Feedback
+                  </label>
+                  <textarea
+                    value={feedbackComment}
+                    onChange={(e) => setFeedbackComment(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-xs resize-none outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Share your thoughts on the meeting..."
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={submittingFeedback}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-md transition disabled:opacity-50"
+                >
+                  {submittingFeedback ? "Submitting..." : "Submit Feedback"}
+                </button>
+              </form>
+            )}
+          </div>
+
+          {canComment && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-24">
               <h3 className="font-bold text-gray-900 mb-2">Leave a Comment</h3>
               <p className="text-xs text-gray-500 mb-4">
@@ -201,7 +290,7 @@ const GuestMeetingView = () => {
                   onChange={(e) => setComment(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 resize-none"
                   rows={4}
-                  placeholder="Type your feedback here..."
+                  placeholder="Type your note here..."
                   required
                 />
                 <button
@@ -213,8 +302,8 @@ const GuestMeetingView = () => {
                 </button>
               </form>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );

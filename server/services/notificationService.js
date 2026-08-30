@@ -1,39 +1,10 @@
 import notificationModel from "../models/notificationModel.js";
 import NotificationPreference from "../models/notificationPreferenceModel.js";
+import QueuedNotification from "../models/queuedNotificationModel.js";
+import EmailService from "./EmailService.js";
+import { sendSlackNotification } from "./slackService.js";
+import User from "../models/userModel.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Issue #977 — notification delivery.
-//
-// Two problems lived here:
-//
-//   1. Only two of the six preference toggles were ever consulted. `system`,
-//      `organizations`, `policies` and `reports` mapped to `null`, and
-//      `pushTaskAssignments` / the three `email*` toggles were writable through
-//      the API and rendered as working switches in the UI while being read by
-//      nothing at all.
-//
-//   2. Fan-out was a sequential N+1. `events/listeners.js` looped over
-//      recipients awaiting `createNotification` per person, and each call ran
-//      its own `NotificationPreference.findOne()` *and* its own `create()`. For
-//      a 500-member organization that is 1000 sequential round-trips inside an
-//      un-awaited EventEmitter handler.
-//
-// `createNotifications` (plural) fixes the second by prefetching every relevant
-// preference in one query and writing with one `insertMany`. `createNotification`
-// stays as a thin wrapper so no existing caller had to change.
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Maps a notification category to the preference field that governs it.
- *
- * `null` means "always deliver" — a deliberate choice, not an oversight:
- * `system` covers account and export notifications a user cannot opt out of
- * without losing things they explicitly asked for.
- *
- * Every category in `notificationModel`'s enum must appear here. The test suite
- * asserts that, so adding a category without deciding how it's governed fails
- * loudly instead of silently defaulting to "always send".
- */
 export const CATEGORY_TO_PREFERENCE = Object.freeze({
   meetings: "pushMeetingReminders",
   tasks: "pushTaskAssignments",
@@ -45,112 +16,51 @@ export const CATEGORY_TO_PREFERENCE = Object.freeze({
 });
 
 /**
- * Loads preferences for many users in one query and returns a lookup keyed by
- * user id.
- *
- * Users with no preference document are simply absent; callers treat that as
- * "all defaults", which matches the previous per-user behaviour (`if (!prefs)
- * return false`).
- *
- * @param {Array<string|object>} userIds
- * @returns {Promise<Map<string, object>>}
+ * Maps a notification context to a simplified routing category: slaAlerts, comments, or recaps.
  */
-const loadPreferences = async (userIds) => {
-  const map = new Map();
-  if (!userIds.length) return map;
-
-  try {
-    const docs = await NotificationPreference.find({
-      user: { $in: userIds },
-    }).lean();
-
-    for (const doc of docs) {
-      map.set(String(doc.user), doc);
-    }
-  } catch (error) {
-    // Preferences are an optimisation over "deliver everything". Failing to
-    // read them must not silently drop notifications, so fall through to an
-    // empty map (= defaults = deliver).
-    console.error(
-      "⚠️ Failed to load notification preferences; delivering with defaults:",
-      error.message,
-    );
+export const getRoutingCategory = (category, title, description) => {
+  const text =
+    `${title || ""} ${description || ""} ${category || ""}`.toLowerCase();
+  if (
+    text.includes("sla") ||
+    text.includes("breach") ||
+    text.includes("due") ||
+    text.includes("mitigate") ||
+    category === "tasks" ||
+    category === "policies"
+  ) {
+    return "slaAlerts";
   }
-
-  return map;
+  if (
+    text.includes("comment") ||
+    text.includes("reply") ||
+    category === "comments"
+  ) {
+    return "comments";
+  }
+  return "recaps";
 };
 
 /**
- * Decides whether a category is suppressed for a given preference document.
- *
- * @param {object|undefined} prefs
- * @param {string} category
- * @returns {boolean}
+ * Validates action URLs, repairing relative links and guaranteeing valid URL structures.
  */
-export const isSuppressed = (prefs, category) => {
-  const field = CATEGORY_TO_PREFERENCE[category];
-  if (!field) return false;
-  if (!prefs) return false;
-  // Only an explicit `false` suppresses. An undefined field (a preference
-  // document written before this toggle existed) means "not configured", which
-  // must fall back to the schema default rather than being read as "off".
-  return prefs[field] === false;
+export const validateAndRepairLink = (url) => {
+  if (!url) return "";
+  let repairedUrl = url;
+  if (url.startsWith("/")) {
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    repairedUrl = `${baseUrl}${url}`;
+  }
+  try {
+    new URL(repairedUrl);
+    return repairedUrl;
+  } catch {
+    return `${process.env.FRONTEND_URL || "http://localhost:3000"}/dashboard`;
+  }
 };
 
 /**
- * True when the user has muted in-app notifications for this meeting (Issue #2064).
- *
- * @param {object|undefined} prefs
- * @param {object} [metadata]
- * @returns {boolean}
- */
-export const isMeetingMuted = (prefs, metadata = {}) => {
-  if (!prefs?.mutedMeetingIds?.length) return false;
-  const meetingId = metadata?.meetingId;
-  if (!meetingId) return false;
-  const target = String(meetingId);
-  return prefs.mutedMeetingIds.some((id) => String(id) === target);
-};
-
-/**
- * Formats a notification document for API/socket responses.
- *
- * @param {object} notification
- */
-export const formatNotification = (notification) => ({
-  id: notification._id,
-  // Included so bulk callers can route each notification to its recipient's
-  // socket room. `insertMany` preserves input order, but the delivered set is a
-  // *filtered* subset (suppressed recipients are dropped), so the recipient has
-  // to be read back off the document rather than inferred by index.
-  user: notification.user,
-  title: notification.title,
-  description: notification.description,
-  category: notification.category,
-  isRead: notification.isRead,
-  actionUrl: notification.actionUrl,
-  actionLabel: notification.actionLabel,
-  metadata: notification.metadata,
-  createdAt: notification.createdAt,
-  updatedAt: notification.updatedAt,
-});
-
-/**
- * Creates one notification per recipient in a single round-trip pair.
- *
- * Replaces the sequential loop that ran two queries per recipient. Total cost is
- * now one `find` plus one `insertMany`, regardless of how many people are being
- * notified.
- *
- * @param {Array<string|object>} recipients user ids
- * @param {object} payload
- * @param {string} payload.title
- * @param {string} payload.description
- * @param {string} [payload.category]
- * @param {string} [payload.actionUrl]
- * @param {string} [payload.actionLabel]
- * @param {object} [payload.metadata]
- * @returns {Promise<object[]>} formatted notifications for delivered recipients
+ * Queues notification templates for future processed deliveries or immediate dispatch.
  */
 export const createNotifications = async (recipients, payload) => {
   const {
@@ -160,6 +70,7 @@ export const createNotifications = async (recipients, payload) => {
     actionUrl = "",
     actionLabel = "",
     metadata = {},
+    forceImmediate = false,
   } = payload ?? {};
 
   if (!Array.isArray(recipients) || recipients.length === 0) return [];
@@ -170,68 +81,186 @@ export const createNotifications = async (recipients, payload) => {
     return [];
   }
 
-  // De-duplicate up front. A user who is both the organizer and an attendee
-  // would otherwise get the same notification twice.
   const uniqueIds = [
     ...new Set(recipients.filter(Boolean).map((id) => String(id))),
   ];
   if (uniqueIds.length === 0) return [];
 
+  const createdLogs = [];
   try {
-    const prefsByUser = await loadPreferences(uniqueIds);
+    for (const userId of uniqueIds) {
+      const prefs = await NotificationPreference.findOne({ user: userId });
+      const routingCat = getRoutingCategory(category, title, description);
+      const routing = prefs?.routingPreferences?.[routingCat] || {
+        slack: true,
+        email: true,
+        inApp: true,
+      };
 
-    const deliverTo = uniqueIds.filter((userId) => {
-      const prefs = prefsByUser.get(userId);
-      if (isSuppressed(prefs, category)) return false;
-      if (isMeetingMuted(prefs, metadata)) return false;
-      return true;
-    });
+      // Auto-repair action URLs
+      const repairedUrl = validateAndRepairLink(actionUrl);
 
-    const suppressedCount = uniqueIds.length - deliverTo.length;
-    if (suppressedCount > 0) {
-      console.log(
-        `🔇 ${suppressedCount} notification(s) suppressed — category "${category}" disabled or meeting muted`,
-      );
+      // Check if all channels are turned off for this preference
+      if (!routing.slack && !routing.email && !routing.inApp) {
+        continue;
+      }
+
+      const threshold = forceImmediate
+        ? 0
+        : (prefs?.batchThresholdMinutes ?? 5);
+
+      if (threshold === 0) {
+        // Dispatch immediately
+        const user = await User.findById(userId);
+        if (routing.inApp) {
+          const log = await notificationModel.create({
+            user: userId,
+            title,
+            description,
+            category,
+            actionUrl: repairedUrl,
+            actionLabel,
+            metadata,
+          });
+          createdLogs.push(log);
+        }
+        if (routing.email && user?.email) {
+          await EmailService.sendNotificationEmail(
+            user.email,
+            title,
+            description,
+          );
+        }
+        if (routing.slack && user?.organization) {
+          await sendSlackNotification(
+            user.organization,
+            `*${title}*\n${description}`,
+          );
+        }
+      } else {
+        // Queue notification
+        const processAfter = new Date(Date.now() + threshold * 60 * 1000);
+        await QueuedNotification.create({
+          userId,
+          title,
+          description,
+          category,
+          actionUrl: repairedUrl,
+          actionLabel,
+          metadata,
+          processAfter,
+          status: "pending",
+        });
+      }
     }
-
-    if (deliverTo.length === 0) return [];
-
-    const docs = await notificationModel.insertMany(
-      deliverTo.map((user) => ({
-        user,
-        title,
-        description,
-        category,
-        actionUrl,
-        actionLabel,
-        metadata,
-      })),
-    );
-
-    return docs.map(formatNotification);
   } catch (error) {
-    // Notification delivery is never allowed to break the flow that triggered
-    // it (meeting creation, export completion, …).
-    console.error("Error creating notifications:", error);
-    return [];
+    console.error("Error creating queued notifications:", error);
   }
+
+  return createdLogs;
 };
 
 /**
- * Creates a notification for a single user.
- *
- * Signature unchanged from the original positional form so every existing
- * caller keeps working.
- *
- * @param {string} userId - The ID of the user to notify
- * @param {string} title - Notification title
- * @param {string} description - Notification description
- * @param {string} category - Category (e.g. "meetings", "tasks", "system")
- * @param {string} actionUrl - URL to navigate to when clicked (optional)
- * @param {string} actionLabel - Label for the action button (optional)
- * @param {object} metadata - Additional metadata (optional)
- * @returns {Promise<object|null>} formatted notification, or null if suppressed
+ * Process pending queued notifications, aggregating them into digest summaries.
  */
+export const processNotificationQueue = async () => {
+  try {
+    const now = new Date();
+    const pending = await QueuedNotification.find({
+      status: "pending",
+      processAfter: { $lte: now },
+    });
+
+    if (pending.length === 0) return;
+
+    const groups = {};
+    for (const item of pending) {
+      const routingCat = getRoutingCategory(
+        item.category,
+        item.title,
+        item.description,
+      );
+      const key = `${item.userId}_${routingCat}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    }
+
+    for (const key in groups) {
+      const items = groups[key];
+      const firstItem = items[0];
+      const userId = firstItem.userId;
+      const category = firstItem.category;
+
+      const user = await User.findById(userId);
+      if (!user) continue;
+
+      const prefs = await NotificationPreference.findOne({ user: userId });
+      const routingCat = getRoutingCategory(
+        category,
+        firstItem.title,
+        firstItem.description,
+      );
+      const routing = prefs?.routingPreferences?.[routingCat] || {
+        slack: true,
+        email: true,
+        inApp: true,
+      };
+
+      let finalTitle = firstItem.title;
+      let finalDescription = firstItem.description;
+      let finalActionUrl = firstItem.actionUrl;
+
+      if (items.length > 1) {
+        finalTitle = `[Digest] You have ${items.length} new updates in ${
+          routingCat === "slaAlerts"
+            ? "SLAs"
+            : routingCat === "comments"
+              ? "Comments"
+              : "Recaps"
+        }`;
+        finalDescription = items
+          .map((it, idx) => `${idx + 1}. ${it.title}: ${it.description}`)
+          .join("\n");
+      }
+
+      if (routing.inApp) {
+        await notificationModel.create({
+          user: userId,
+          title: finalTitle,
+          description: finalDescription,
+          category,
+          actionUrl: finalActionUrl,
+          actionLabel: firstItem.actionLabel,
+          metadata: firstItem.metadata,
+        });
+      }
+
+      if (routing.email && user.email) {
+        await EmailService.sendNotificationEmail(
+          user.email,
+          finalTitle,
+          finalDescription,
+        );
+      }
+
+      if (routing.slack && user.organization) {
+        await sendSlackNotification(
+          user.organization,
+          `*${finalTitle}*\n${finalDescription}`,
+        );
+      }
+
+      const ids = items.map((it) => it._id);
+      await QueuedNotification.updateMany(
+        { _id: { $in: ids } },
+        { $set: { status: "processed" } },
+      );
+    }
+  } catch (error) {
+    console.error("❌ Error in processNotificationQueue:", error);
+  }
+};
+
 export const createNotification = async (
   userId,
   title,
@@ -240,6 +269,7 @@ export const createNotification = async (
   actionUrl = "",
   actionLabel = "",
   metadata = {},
+  forceImmediate = false,
 ) => {
   if (!userId) return null;
 
@@ -250,12 +280,13 @@ export const createNotification = async (
     actionUrl,
     actionLabel,
     metadata,
+    forceImmediate,
   });
 
   return notification ?? null;
 };
 
-/** @deprecated Prefer createNotification with explicit title/description. */
+/** @deprecated Prefer createNotification. */
 export const notifyUser = async (
   userId,
   category,

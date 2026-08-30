@@ -209,3 +209,29 @@ export const bulkRejectMembershipRequests = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * ✅ Add Comment to Membership Request
+ * POST /api/membership-requests/:id/comments
+ */
+export const addCommentToMembershipRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+
+    if (!req.user || !req.user.id) {
+      return sendError(res, 401, "Authentication failed.");
+    }
+
+    const request = await MembershipRequestService.addComment(
+      req.user.id,
+      id,
+      text,
+      req.user.organization,
+    );
+
+    sendSuccess(res, { request }, "Comment added successfully.", 201);
+  } catch (error) {
+    next(error);
+  }
+};

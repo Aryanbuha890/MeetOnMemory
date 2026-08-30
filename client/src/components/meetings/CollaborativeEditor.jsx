@@ -10,6 +10,7 @@ import PresenceAvatars from "./PresenceAvatars";
 import VersionHistory from "./VersionHistory";
 import NoteVersionHistory from "../NoteVersionHistory";
 import CollabSyncStatusChip from "./CollabSyncStatusChip";
+import NoteTemplateSelector from "./NoteTemplateSelector";
 
 /**
  * @desc Main collaborative editor pane (Tiptap + Yjs). Remount via `key` after
@@ -139,6 +140,16 @@ const CollaborativeEditorPane = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {!isReadOnly && editor && (
+              <NoteTemplateSelector
+                disabled={isReadOnly || !editor}
+                onApplyTemplate={(htmlContent) => {
+                  if (editor) {
+                    editor.commands.insertContent(htmlContent);
+                  }
+                }}
+              />
+            )}
             <button
               type="button"
               onClick={onOpenHistory}

@@ -12,6 +12,7 @@ import {
   XCircle,
   PenLine,
   Sparkles,
+  History,
 } from "lucide-react";
 
 /**
@@ -42,6 +43,12 @@ const ConflictResolution = () => {
   const [loading, setLoading] = useState(true);
   const [resolvingId, setResolvingId] = useState(null);
   const [customValues, setCustomValues] = useState({});
+
+  const [activeTab, setActiveTab] = useState("conflicts");
+  const [historyItems, setHistoryItems] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedConflicts, setSelectedConflicts] = useState(new Set());
+  const [bulkResolving, setBulkResolving] = useState(false);
 
   // Confirmation modal state (#1342)
   const [confirmConfig, setConfirmConfig] = useState({
@@ -74,6 +81,65 @@ const ConflictResolution = () => {
   useEffect(() => {
     loadConflicts();
   }, [loadConflicts]);
+
+  const loadHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await knowledgeApi.getConflictAuditHistory({
+        page: 1,
+        limit: 50,
+      });
+      if (res.data?.success) {
+        setHistoryItems(res.data.history || []);
+      }
+    } catch (err) {
+      console.error("Failed to load history", err);
+      toast.error("Failed to load audit history.");
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "history") {
+      loadHistory();
+    }
+  }, [activeTab, loadHistory]);
+
+  const toggleSelection = (id) => {
+    const next = new Set(selectedConflicts);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedConflicts(next);
+  };
+
+  const toggleAll = () => {
+    if (selectedConflicts.size === conflicts.length && conflicts.length > 0) {
+      setSelectedConflicts(new Set());
+    } else {
+      setSelectedConflicts(new Set(conflicts.map((c) => c._id)));
+    }
+  };
+
+  const handleBulkDismiss = async () => {
+    if (selectedConflicts.size === 0) return;
+    setBulkResolving(true);
+    try {
+      const res = await knowledgeApi.bulkResolveConflicts({
+        conflictIds: Array.from(selectedConflicts),
+        resolutionType: "dismissed",
+      });
+      if (res.data?.success) {
+        toast.success(res.data.message || "Conflicts bulk dismissed");
+        setSelectedConflicts(new Set());
+        loadConflicts();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Bulk resolve failed");
+    } finally {
+      setBulkResolving(false);
+    }
+  };
 
   const runScan = async () => {
     setScanning(true);
@@ -193,158 +259,278 @@ const ConflictResolution = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        {/* Tabs */}
+        <div className="flex items-center gap-4 border-b border-slate-200 dark:border-slate-800">
           <button
             type="button"
-            onClick={runScan}
-            disabled={scanning}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 cursor-pointer"
+            onClick={() => setActiveTab("conflicts")}
+            className={`pb-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === "conflicts"
+                ? "border-amber-600 text-amber-600"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
           >
-            {scanning ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ScanSearch className="w-4 h-4" />
-            )}
-            Scan for conflicts
+            <ShieldAlert className="w-4 h-4 inline-block mr-1.5 mb-0.5" />
+            Active Conflicts
           </button>
           <button
             type="button"
-            onClick={loadConflicts}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            onClick={() => setActiveTab("history")}
+            className={`pb-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+              activeTab === "history"
+                ? "border-amber-600 text-amber-600"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            }`}
           >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
+            <History className="w-4 h-4 inline-block mr-1.5 mb-0.5" />
+            Audit History
           </button>
         </div>
 
-        <div>
-          {loading && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Loading...
-            </p>
-          )}
+        {activeTab === "conflicts" && (
+          <>
+            <div className="flex flex-wrap gap-3 items-center justify-between">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={runScan}
+                  disabled={scanning}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 cursor-pointer"
+                >
+                  {scanning ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ScanSearch className="w-4 h-4" />
+                  )}
+                  Scan for conflicts
+                </button>
+                <button
+                  type="button"
+                  onClick={loadConflicts}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
 
-          {!loading && conflicts.length === 0 && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              No open conflicts — the knowledge graph is consistent. Try running
-              a scan if new memories were just added.
-            </p>
-          )}
-
-          <div className="space-y-4">
-            {conflicts.map((conflict) => (
-              <div
-                key={conflict._id}
-                className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/10 p-5"
-              >
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-300">
-                    <Sparkles className="w-4 h-4" />
-                    Confidence: {conflict.confidence}%
-                  </div>
+              {conflicts.length > 0 && (
+                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedConflicts.size === conflicts.length}
+                      onChange={toggleAll}
+                      className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    Select All
+                  </label>
+                  <div className="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
+                  <button
+                    type="button"
+                    onClick={handleBulkDismiss}
+                    disabled={selectedConflicts.size === 0 || bulkResolving}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer"
+                  >
+                    {bulkResolving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <XCircle className="w-3.5 h-3.5" />
+                    )}
+                    Bulk Dismiss ({selectedConflicts.size})
+                  </button>
                 </div>
+              )}
+            </div>
 
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
-                  {conflict.explanation}
+            <div>
+              {loading && (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Loading...
                 </p>
+              )}
 
-                <div className="grid gap-2 mt-3">
-                  {(conflict.memberSnapshots || []).map((member) => (
-                    <div
-                      key={member.memoryId}
-                      className="flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3"
-                    >
-                      <p className="text-sm text-slate-900 dark:text-white">
-                        {member.text}
-                      </p>
+              {!loading && conflicts.length === 0 && (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  No open conflicts — the knowledge graph is consistent. Try
+                  running a scan if new memories were just added.
+                </p>
+              )}
+
+              <div className="space-y-4">
+                {conflicts.map((conflict) => (
+                  <div
+                    key={conflict._id}
+                    className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/10 p-5"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedConflicts.has(conflict._id)}
+                          onChange={() => toggleSelection(conflict._id)}
+                          className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4 mt-0.5 cursor-pointer"
+                        />
+                        <div className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-300">
+                          <Sparkles className="w-4 h-4" />
+                          Confidence: {conflict.confidence}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 pl-7">
+                      {conflict.explanation}
+                    </p>
+
+                    <div className="grid gap-2 mt-3 pl-7">
+                      {(conflict.memberSnapshots || []).map((member) => (
+                        <div
+                          key={member.memoryId}
+                          className="flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3"
+                        >
+                          <p className="text-sm text-slate-900 dark:text-white">
+                            {member.text}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              promptResolve(
+                                conflict._id,
+                                "kept_member",
+                                { keptMemoryId: member.memoryId },
+                                "Keep Selected Memory Version",
+                                `Are you sure you want to resolve this conflict by keeping "${member.text}"?`,
+                              )
+                            }
+                            disabled={resolvingId === conflict._id}
+                            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+                          >
+                            {resolvingId === conflict._id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            )}
+                            Keep this
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-3 flex-wrap pl-7">
+                      <input
+                        type="text"
+                        placeholder="Neither is right — enter the correct value..."
+                        value={customValues[conflict._id] || ""}
+                        onChange={(e) =>
+                          setCustomValues((prev) => ({
+                            ...prev,
+                            [conflict._id]: e.target.value,
+                          }))
+                        }
+                        className="flex-1 min-w-[220px] rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm"
+                      />
                       <button
                         type="button"
                         onClick={() =>
                           promptResolve(
                             conflict._id,
-                            "kept_member",
-                            { keptMemoryId: member.memoryId },
-                            "Keep Selected Memory Version",
-                            `Are you sure you want to resolve this conflict by keeping "${member.text}"?`,
+                            "custom_value",
+                            { customValue: customValues[conflict._id] || "" },
+                            "Apply Custom Correction",
+                            `Are you sure you want to update this memory entry to "${customValues[conflict._id]}"?`,
                           )
                         }
-                        disabled={resolvingId === conflict._id}
-                        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+                        disabled={
+                          resolvingId === conflict._id ||
+                          !customValues[conflict._id]
+                        }
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
                       >
                         {resolvingId === conflict._id ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <PenLine className="w-3.5 h-3.5" />
                         )}
-                        Keep this
+                        Save correction
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          promptResolve(
+                            conflict._id,
+                            "dismissed",
+                            {},
+                            "Dismiss Conflict",
+                            "Are you sure you want to mark this conflict as a false positive and dismiss it?",
+                          )
+                        }
+                        disabled={resolvingId === conflict._id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 text-xs font-medium hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer"
+                      >
+                        {resolvingId === conflict._id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5" />
+                        )}
+                        Not a conflict
                       </button>
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 mt-3 flex-wrap">
-                  <input
-                    type="text"
-                    placeholder="Neither is right — enter the correct value..."
-                    value={customValues[conflict._id] || ""}
-                    onChange={(e) =>
-                      setCustomValues((prev) => ({
-                        ...prev,
-                        [conflict._id]: e.target.value,
-                      }))
-                    }
-                    className="flex-1 min-w-[220px] rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      promptResolve(
-                        conflict._id,
-                        "custom_value",
-                        { customValue: customValues[conflict._id] || "" },
-                        "Apply Custom Correction",
-                        `Are you sure you want to update this memory entry to "${customValues[conflict._id]}"?`,
-                      )
-                    }
-                    disabled={
-                      resolvingId === conflict._id ||
-                      !customValues[conflict._id]
-                    }
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
-                  >
-                    {resolvingId === conflict._id ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <PenLine className="w-3.5 h-3.5" />
-                    )}
-                    Save correction
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      promptResolve(
-                        conflict._id,
-                        "dismissed",
-                        {},
-                        "Dismiss Conflict",
-                        "Are you sure you want to mark this conflict as a false positive and dismiss it?",
-                      )
-                    }
-                    disabled={resolvingId === conflict._id}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 text-xs font-medium hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer"
-                  >
-                    {resolvingId === conflict._id ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <XCircle className="w-3.5 h-3.5" />
-                    )}
-                    Not a conflict
-                  </button>
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          </>
+        )}
+
+        {activeTab === "history" && (
+          <div className="space-y-4">
+            {loadingHistory && (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Loading audit history...
+              </p>
+            )}
+            {!loadingHistory && historyItems.length === 0 && (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                No conflict resolution history available.
+              </p>
+            )}
+            <div className="space-y-3">
+              {historyItems.map((log) => (
+                <div
+                  key={log._id}
+                  className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {log.action === "conflict_bulk_resolved"
+                        ? "Bulk Dismissed"
+                        : "Resolved"}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="text-sm text-slate-600 dark:text-slate-300">
+                    <span className="font-medium">
+                      {log.actor?.name || log.actor?.email || "Unknown User"}
+                    </span>{" "}
+                    resolved{" "}
+                    <span className="font-medium">
+                      {log.action === "conflict_bulk_resolved"
+                        ? `${log.details?.resolvedCount} conflicts`
+                        : "1 conflict"}
+                    </span>
+                    {log.details?.resolutionType === "custom_value" && (
+                      <span className="italic block mt-1 border-l-2 border-slate-300 dark:border-slate-600 pl-2">
+                        "{log.details.customValue}"
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Resolution Confirmation Modal (#1342) */}

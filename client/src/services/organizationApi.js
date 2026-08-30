@@ -33,10 +33,25 @@ export const organizationApi = {
     apiClient.post(`/api/organizations/${orgId}/invite`, data),
   acceptInviteToken: (token) =>
     apiClient.post(`/api/organizations/invite/${token}/accept`),
-  updateMemberRole: (orgId, userId, role) =>
+  updateMemberRole: (orgId, userId, role, reason) =>
     apiClient.patch(`/api/organizations/${orgId}/members/${userId}/role`, {
       role,
+      reason,
     }),
+  deactivateMember: (orgId, userId, reason) =>
+    apiClient.patch(
+      `/api/organizations/${orgId}/members/${userId}/deactivate`,
+      { reason },
+    ),
+  reactivateMember: (orgId, userId) =>
+    apiClient.patch(`/api/organizations/${orgId}/members/${userId}/reactivate`),
+  updateMemberCapacity: (orgId, userId, capacity) =>
+    apiClient.patch(
+      `/api/organizations/${orgId}/members/${userId}/capacity`,
+      capacity,
+    ),
+  getMemberRoleHistory: (orgId, userId) =>
+    apiClient.get(`/api/organizations/${orgId}/members/${userId}/role-history`),
   removeMember: (orgId, userId) =>
     apiClient.delete(`/api/organizations/${orgId}/members/${userId}`),
   getAuditLogs: (orgId, params) =>

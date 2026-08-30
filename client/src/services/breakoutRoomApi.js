@@ -28,6 +28,30 @@ export const breakoutRoomApi = {
     return response.data;
   },
 
+  randomAssign: async (meetingId, roomIds, participantIds) => {
+    const response = await apiClient.post(
+      `/api/meetings/${meetingId}/breakout-rooms/random-assign`,
+      { meetingId, roomIds, participantIds },
+    );
+    return response.data;
+  },
+
+  broadcastMessage: async (meetingId, message) => {
+    const response = await apiClient.post(
+      `/api/meetings/${meetingId}/breakout-rooms/broadcast`,
+      { meetingId, message },
+    );
+    return response.data;
+  },
+
+  closeAllRooms: async (meetingId) => {
+    const response = await apiClient.post(
+      `/api/meetings/${meetingId}/breakout-rooms/close-all`,
+      { meetingId },
+    );
+    return response.data;
+  },
+
   startRoom: async (meetingId, roomId) => {
     const response = await apiClient.post(
       `/api/meetings/${meetingId}/breakout-rooms/${roomId}/start`,

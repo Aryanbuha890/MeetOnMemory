@@ -24,6 +24,8 @@ const RecapPreferences = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
+  const [previewError, setPreviewError] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const quietHoursError = (() => {
@@ -96,6 +98,9 @@ const RecapPreferences = () => {
       toast.error("Please fix quiet hours configuration to preview.");
       return;
     }
+    setPreviewLoading(true);
+    setPreviewError("");
+    setIsPreviewOpen(true);
     try {
       const payload = {
         ...preferences,
@@ -110,9 +115,12 @@ const RecapPreferences = () => {
       };
       const html = await previewRecapEmail(payload);
       setPreviewHtml(sanitizeHtml(html));
-      setIsPreviewOpen(true);
     } catch {
+      setPreviewError("Failed to generate preview");
+      setPreviewHtml("");
       toast.error("Failed to generate preview");
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -222,7 +230,10 @@ const RecapPreferences = () => {
         className="fixed z-50 inset-0 overflow-y-auto"
       >
         <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-          <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+          <div
+            className="fixed inset-0 bg-black opacity-30"
+            aria-hidden="true"
+          />
           <span
             className="hidden sm:inline-block sm:align-middle sm:h-screen"
             aria-hidden="true"
@@ -242,7 +253,11 @@ const RecapPreferences = () => {
                   <SandboxedHtmlPreview
                     htmlContent={previewHtml}
                     title="Email Preview"
-                    className="min-h-[240px]"
+                    size="sm"
+                    theme="light"
+                    loading={previewLoading}
+                    error={previewError}
+                    onRetry={handlePreview}
                   />
                 </div>
               </div>

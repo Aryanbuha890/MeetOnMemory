@@ -29,5 +29,17 @@ export const getEscalationDashboardMetrics = async (organizationId) => {
   const { data } = await apiClient.get(`/api/escalations/dashboard`, {
     params: { organizationId },
   });
-  return data.data;
+  return data.dashboard || data.data;
+};
+
+export const getEscalationHistory = async (organizationId) => {
+  const { data } = await apiClient.get(`/api/escalations/history`, {
+    params: { organizationId },
+  });
+  return data.events || data.data || [];
+};
+
+export const triggerManualEscalation = async (payload = {}) => {
+  const { data } = await apiClient.post(`/api/escalations/trigger`, payload);
+  return data;
 };

@@ -39,6 +39,9 @@ import {
   regenerateMeetingInvite,
   updateMeetingInvite,
   resolveMeetingInvite,
+  anonymizeMeeting,
+  getRawTranscript,
+  cloneMeeting,
 } from "../controllers/meetingController.js";
 import {
   addMeetingBookmark,
@@ -66,6 +69,8 @@ import {
   persistCaptionSegments,
 } from "../controllers/transcriptController.js";
 import { getMeetingRoles } from "../controllers/roleRotationController.js";
+import { getOrgRetentionLeaderboard } from "../controllers/meetingQuizController.js";
+import { initiateTransfer } from "../controllers/meetingOwnershipTransferController.js";
 
 import path from "path";
 import { ValidationError } from "../utils/errors.js";
@@ -104,7 +109,7 @@ const ALLOWED_RECORDING_EXTENSIONS = [
   ".mkv",
 ];
 
-const meetingRecordingFilter = (req, file, cb) => {
+export const meetingRecordingFilter = (req, file, cb) => {
   if (!file) {
     return cb(null, true);
   }
@@ -136,9 +141,10 @@ const transcriptUpload = multer({
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
   fileFilter: meetingRecordingFilter,
 });
-const transcriptChunkUpload = multer({
+export const transcriptChunkUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit per chunk
+  fileFilter: meetingRecordingFilter,
 });
 
 // Apply rate limiting to all routes
@@ -176,6 +182,16 @@ router.post(
   requirePermission("meetings", "create"),
   transcriptUpload.single("audio"),
   uploadTranscriptAudio,
+);
+
+// POST /api/meetings/:meetingId/clone
+router.post(
+  "/:meetingId/clone",
+  userAuth,
+  uploadLimiter,
+  requireOrgMembership,
+  requirePermission("meetings", "create"),
+  cloneMeeting,
 );
 
 // POST /api/meetings/:meetingId/transcript/chunk
@@ -592,5 +608,29 @@ router.get(
   requirePermission("meetings", "view"),
   getReactionTimeline,
 );
+
+// ✅ Retrieve organization quiz retention leaderboard
+router.get("/quiz/leaderboard", userAuth, getOrgRetentionLeaderboard);
+
+// ✅ Initiate Meeting Ownership Transfer
+router.post(
+  "/:meetingId/transfers",
+  userAuth,
+  writeLimiter,
+  requireOwner(Meeting),
+  requirePermission("meetings", "edit"),
+  initiateTransfer,
+);
+// ✅ Anonymize / Scrub PII from Meeting
+router.post(
+  "/anonymize",
+  userAuth,
+  writeLimiter,
+  requireAdminOrOwner,
+  anonymizeMeeting,
+);
+
+// ✅ Retrieve unredacted original transcript
+router.get("/:id/raw", userAuth, requireAdminOrOwner, getRawTranscript);
 
 export default router;

@@ -20,9 +20,45 @@ const membershipSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "suspended", "removed"],
+      enum: ["active", "suspended", "removed", "inactive", "deactivated"],
       default: "active",
     },
+    capacity: {
+      weeklyHours: {
+        type: Number,
+        default: 40,
+        min: 0,
+        max: 168,
+      },
+      maxConcurrentMeetings: {
+        type: Number,
+        default: 5,
+        min: 1,
+      },
+    },
+    roleHistory: [
+      {
+        previousRole: {
+          type: String,
+        },
+        newRole: {
+          type: String,
+          required: true,
+        },
+        changedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "user",
+        },
+        changedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        reason: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
     engagementScore: {
       type: Number,
       default: 0,

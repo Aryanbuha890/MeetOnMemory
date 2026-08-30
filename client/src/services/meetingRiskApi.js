@@ -51,6 +51,19 @@ const meetingRiskApi = {
     );
     return response.data;
   },
+
+  mitigateRisk: async (riskId, data) => {
+    const response = await api.put(
+      `/api/meeting-risks/${riskId}/mitigate`,
+      data,
+    );
+    return response.data;
+  },
+
+  getRiskDashboard: async () => {
+    const response = await api.get("/api/meeting-risks/dashboard");
+    return response.data;
+  },
 };
 
 export default meetingRiskApi;

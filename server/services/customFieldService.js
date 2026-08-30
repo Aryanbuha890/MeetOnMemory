@@ -1,5 +1,6 @@
 import CustomFieldDefinition from "../models/customFieldDefinitionModel.js";
 import CustomFieldValue from "../models/customFieldValueModel.js";
+import Meeting from "../models/meetingModel.js";
 
 function normalizeOptions(options) {
   if (!Array.isArray(options)) return [];
@@ -69,6 +70,7 @@ class CustomFieldService {
 
     const bulkOps = [];
     const providedFields = new Set();
+    const meetingCustomFields = [];
 
     for (const field of fieldsData) {
       const def = defMap.get(field.definitionId);
@@ -85,6 +87,13 @@ class CustomFieldService {
           upsert: true,
         },
       });
+
+      meetingCustomFields.push({
+        key: def.name,
+        name: def.name,
+        value: field.value,
+        definitionId: def._id,
+      });
     }
 
     for (const def of definitions) {
@@ -93,9 +102,6 @@ class CustomFieldService {
       }
     }
 
-    // Always try to remove missing required fields and others if needed?
-    // Actually if a field is not provided, maybe we delete it if not required?
-    // Let's delete fields that are not provided
     const providedIds = Array.from(providedFields);
     await CustomFieldValue.deleteMany({
       meeting: meetingId,
@@ -105,6 +111,11 @@ class CustomFieldService {
     if (bulkOps.length > 0) {
       await CustomFieldValue.bulkWrite(bulkOps);
     }
+
+    // Sync customFields array directly to Meeting model for fast query & details access
+    await Meeting.findByIdAndUpdate(meetingId, {
+      $set: { customFields: meetingCustomFields },
+    });
   }
 
   validateValue(value, definition) {

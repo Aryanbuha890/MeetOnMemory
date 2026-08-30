@@ -1,8 +1,5 @@
 // server/tests/icebreaker.test.js
-import {
-  selectIcebreaker,
-  handleIcebreakerReaction,
-} from "../controllers/icebreakerController";
+import { selectIcebreaker } from "../controllers/icebreakerController";
 
 describe("Icebreaker Logic Engine Suite", () => {
   let mockIo;

@@ -16,6 +16,7 @@ const STATUS_COLORS = {
   accepted: "#10B981", // Emerald 500
   declined: "#EF4444", // Red 500
   tentative: "#F59E0B", // Amber 500
+  waitlisted: "#8B5CF6", // Purple 500
   pending: "#9CA3AF", // Gray 400
 };
 
@@ -307,6 +308,9 @@ const RsvpPanel = ({ meetingId, isOrganizer, participants }) => {
                     )}
                     {rsvp.status === "pending" && (
                       <Clock className="w-4 h-4 text-gray-400" />
+                    )}
+                    {rsvp.status === "waitlisted" && (
+                      <Clock className="w-4 h-4 text-purple-500" />
                     )}
                     <span className="text-xs font-medium text-gray-600 capitalize">
                       {rsvp.status}

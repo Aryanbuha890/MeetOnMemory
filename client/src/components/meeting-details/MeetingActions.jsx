@@ -8,6 +8,7 @@ import apiClient from "../../services/apiClient";
 import { meetingApi } from "../../services/meetingApi.js";
 import { notionIntegrationApi } from "../../services/notionIntegrationApi.js";
 import ConfirmModal from "../ConfirmModal.jsx";
+import CloneMeetingModal from "../CloneMeetingModal.jsx";
 import { usePolling } from "../../hooks/usePolling.js";
 import {
   generateICS,
@@ -30,6 +31,7 @@ const MeetingActions = ({ meeting, onDelete, onRename }) => {
     userData?.role === "viewer" || userData?.role === "guest";
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showCloneModal, setShowCloneModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showCalendarMenu, setShowCalendarMenu] = useState(false);
@@ -588,6 +590,26 @@ const MeetingActions = ({ meeting, onDelete, onRename }) => {
           {!isViewerOrGuest && (
             <>
               <button
+                onClick={() => setShowCloneModal(true)}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors text-sm font-medium"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
+                  />
+                </svg>
+                Clone Meeting
+              </button>
+
+              <button
                 onClick={handleRename}
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium"
               >
@@ -838,6 +860,14 @@ const MeetingActions = ({ meeting, onDelete, onRename }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {showCloneModal && (
+        <CloneMeetingModal
+          isOpen={showCloneModal}
+          onClose={() => setShowCloneModal(false)}
+          meetingId={meeting._id}
+        />
       )}
     </>
   );

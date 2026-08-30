@@ -8,14 +8,16 @@ import {
   Loader2,
   RefreshCw,
   Eye,
+  Send,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { absenteeCatchUpApi } from "../../api/absenteeCatchUpApi";
 
-const AbsenteeBriefingCard = ({ meetingId }) => {
+const AbsenteeBriefingCard = ({ meetingId, isOrganizer = false }) => {
   const [catchUp, setCatchUp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDelivering, setIsDelivering] = useState(false);
 
   const fetchBriefing = useCallback(async () => {
     if (!meetingId) return;
@@ -53,6 +55,26 @@ const AbsenteeBriefingCard = ({ meetingId }) => {
       );
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleOrganizerDeliver = async () => {
+    try {
+      setIsDelivering(true);
+      const data =
+        await absenteeCatchUpApi.generateAndDeliverCatchUp(meetingId);
+      if (data.success) {
+        toast.success(
+          `Generated & delivered ${data.deliveredCount || 1} catch-up pack(s) to absentees!`,
+        );
+      }
+    } catch (err) {
+      console.error("Error delivering catch-up to absentees:", err);
+      toast.error(
+        err.response?.data?.message || "Failed to deliver catch-up packs",
+      );
+    } finally {
+      setIsDelivering(false);
     }
   };
 
@@ -113,7 +135,30 @@ const AbsenteeBriefingCard = ({ meetingId }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {isOrganizer && (
+            <button
+              type="button"
+              data-testid="organizer-deliver-catchup-btn"
+              onClick={handleOrganizerDeliver}
+              disabled={isDelivering}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+              title="Generate AI catch-up packs and deliver via email and notifications to all meeting absentees"
+            >
+              {isDelivering ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Delivering...
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  Deliver to Absentees
+                </>
+              )}
+            </button>
+          )}
+
           {catchUp ? (
             <>
               {!isRead && (

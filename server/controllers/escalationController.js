@@ -9,6 +9,8 @@
  */
 
 import EscalationPolicy from "../models/escalationPolicyModel.js";
+import EscalationEvent from "../models/escalationEventModel.js";
+import { evaluateEscalations } from "../services/escalationService.js";
 
 /**
  * Whitelisted policy attributes permitted during create and update operations.
@@ -138,6 +140,21 @@ export const getEscalationPolicyDashboard = async (req, res) => {
       isActive: true,
     });
 
+    const recentEvents = await EscalationEvent.find({ organization: userOrgId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("actionItem")
+      .populate("policy")
+      .lean();
+
+    const totalEscalated = await EscalationEvent.countDocuments({
+      organization: userOrgId,
+    });
+    const failedEscalated = await EscalationEvent.countDocuments({
+      organization: userOrgId,
+      status: "failed",
+    });
+
     return res.status(200).json({
       success: true,
       dashboard: {
@@ -145,10 +162,113 @@ export const getEscalationPolicyDashboard = async (req, res) => {
         activePolicies,
         inactivePolicies: totalPolicies - activePolicies,
         organizationId: userOrgId,
+        metrics: {
+          totalEscalated,
+          activeEscalated: activePolicies,
+          resolvedEscalated: totalEscalated - failedEscalated,
+          resolutionRate:
+            totalEscalated > 0
+              ? Math.round(
+                  ((totalEscalated - failedEscalated) / totalEscalated) * 100,
+                )
+              : 100,
+        },
+        recentEvents,
       },
     });
   } catch (err) {
     console.error("Error in getEscalationPolicyDashboard:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+/**
+ * GET /api/escalation-policies/history
+ * Retrieve full escalation run history with tenant isolation.
+ */
+export const getEscalationHistory = async (req, res) => {
+  try {
+    const userOrgId = getUserOrganizationId(req);
+    if (!userOrgId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User organization context missing.",
+      });
+    }
+
+    const requestedOrgId = req.query?.organizationId;
+    if (requestedOrgId && requestedOrgId.toString() !== userOrgId) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized cross-tenant organization access.",
+      });
+    }
+
+    const events = await EscalationEvent.find({ organization: userOrgId })
+      .sort({ createdAt: -1 })
+      .populate("actionItem")
+      .populate("policy")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      events,
+    });
+  } catch (err) {
+    console.error("Error in getEscalationHistory:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+/**
+ * POST /api/escalation-policies/trigger
+ * Manually trigger an escalation evaluation run for active policies.
+ * Defends against Unauthorized Execution via Strict Admin-Only Authorization.
+ */
+export const triggerManualEscalation = async (req, res) => {
+  try {
+    const userOrgId = getUserOrganizationId(req);
+    if (!userOrgId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User organization context missing.",
+      });
+    }
+
+    const userRole = req.user?.role || req.user?.organizationRole;
+    const isAdmin =
+      userRole === "admin" ||
+      userRole === "owner" ||
+      req.user?.isAdmin === true;
+
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Unauthorized: Admin privileges required for manual escalation trigger.",
+      });
+    }
+
+    const { policyId } = req.body || {};
+
+    const result = await evaluateEscalations({
+      organizationId: userOrgId,
+      policyId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Manual escalation evaluation completed successfully.",
+      result,
+    });
+  } catch (err) {
+    console.error("Error in triggerManualEscalation:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error.",

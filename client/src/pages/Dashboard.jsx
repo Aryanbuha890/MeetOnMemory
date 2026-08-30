@@ -15,6 +15,7 @@ import {
   Trophy,
   ArrowRight,
   CalendarRange,
+  TrendingUp,
 } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import TopContributorsWidget from "../components/organization/TopContributorsWidget";
@@ -46,6 +47,8 @@ const ROUTE_MAP = {
   reports: "/reports",
   "attendance-analytics": "/attendance-analytics",
   "meeting-cost-analytics": "/meeting-cost-analytics",
+  "meeting-roi-dashboard": "/meeting-roi-dashboard",
+  "ai-notes-dashboard": "/ai-notes-dashboard",
   leaderboard: "/leaderboard",
   "meeting-series": "/meeting-series",
 };
@@ -180,6 +183,34 @@ const Dashboard = () => {
         "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-800",
       accentRing: "group-hover:ring-blue-100 dark:group-hover:ring-blue-900/40",
       adminOnly: true,
+    },
+    {
+      id: "meeting-roi-dashboard",
+      icon: TrendingUp,
+      title: "Meeting ROI Dashboard",
+      description:
+        "Track meeting cost efficiency against decision value, industry benchmarks, and what-if simulation.",
+      iconBg: "bg-emerald-50 dark:bg-emerald-900/30",
+      iconColor: "text-emerald-600 dark:text-emerald-400",
+      tag: "ROI",
+      tagColor:
+        "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800",
+      accentRing:
+        "group-hover:ring-emerald-100 dark:group-hover:ring-emerald-900/40",
+    },
+    {
+      id: "ai-notes-dashboard",
+      icon: Sparkles,
+      title: "AI Meeting Notes",
+      description:
+        "AI-powered note synthesis, action extraction, quality scoring, versioning, and templates.",
+      iconBg: "bg-indigo-50 dark:bg-indigo-900/30",
+      iconColor: "text-indigo-600 dark:text-indigo-400",
+      tag: "AI Notes",
+      tagColor:
+        "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-800",
+      accentRing:
+        "group-hover:ring-indigo-100 dark:group-hover:ring-indigo-900/40",
     },
     {
       id: "leaderboard",

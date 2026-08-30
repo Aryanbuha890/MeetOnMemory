@@ -1,7 +1,14 @@
 import React from "react";
 import { Filter, ChevronDown, X } from "lucide-react";
 
-const MeetingFilters = ({ filters, onFilterChange, onClearFilters }) => {
+const MeetingFilters = ({
+  filters,
+  onFilterChange,
+  onClearFilters,
+  customFieldDefinitions = [],
+  customFieldFilters = {},
+  onCustomFieldChange,
+}) => {
   const [showDropdown, setShowDropdown] = React.useState(false);
 
   const filterOptions = [
@@ -51,11 +58,20 @@ const MeetingFilters = ({ filters, onFilterChange, onClearFilters }) => {
     },
   ];
 
+  const activeCustomFieldCount = Object.values(customFieldFilters).filter(
+    (v) => v && v !== "all" && v !== "",
+  ).length;
+
   const hasActiveFilters =
     filters.status !== "all" ||
     filters.meetingType !== "all" ||
     filters.dateRange !== "all" ||
-    filters.sortBy !== "createdAt-desc";
+    filters.sortBy !== "createdAt-desc" ||
+    activeCustomFieldCount > 0;
+
+  const totalActiveFilters =
+    Object.values(filters).filter((v) => v !== "all" && v !== "createdAt-desc")
+      .length + activeCustomFieldCount;
 
   return (
     <div className="relative">
@@ -70,8 +86,8 @@ const MeetingFilters = ({ filters, onFilterChange, onClearFilters }) => {
         <Filter size={18} />
         <span className="font-medium">Filters</span>
         {hasActiveFilters && (
-          <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5">
-            {Object.values(filters).filter((v) => v !== "all").length}
+          <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5 font-bold">
+            {totalActiveFilters}
           </span>
         )}
         <ChevronDown
@@ -119,6 +135,53 @@ const MeetingFilters = ({ filters, onFilterChange, onClearFilters }) => {
                 </select>
               </div>
             ))}
+
+            {/* Custom Field Facets */}
+            {customFieldDefinitions.length > 0 && (
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Custom Field Facets
+                </h4>
+                {customFieldDefinitions.map((def) => {
+                  const val = customFieldFilters[def.name] || "";
+                  return (
+                    <div key={def._id}>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {def.name}
+                      </label>
+                      {def.type === "dropdown" ? (
+                        <select
+                          value={val}
+                          onChange={(e) =>
+                            onCustomFieldChange &&
+                            onCustomFieldChange(def.name, e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-sm"
+                        >
+                          <option value="">All {def.name}s</option>
+                          {def.options?.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder={`Filter by ${def.name}`}
+                          value={val}
+                          onChange={(e) =>
+                            onCustomFieldChange &&
+                            onCustomFieldChange(def.name, e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-sm"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <button

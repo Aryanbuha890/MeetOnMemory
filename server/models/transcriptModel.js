@@ -133,6 +133,10 @@ transcriptSchema.index({ meeting: 1 });
 transcriptSchema.index({ status: 1 });
 transcriptSchema.index({ createdAt: -1 });
 transcriptSchema.index({ organizationId: 1 });
+transcriptSchema.index(
+  { "segments.text": "text" },
+  { background: true, name: "segments_text_index" },
+);
 
 const Transcript = mongoose.model("Transcript", transcriptSchema);
 export default Transcript;

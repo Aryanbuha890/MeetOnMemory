@@ -291,7 +291,7 @@ export const searchVectorStore = async (query, filters = {}) => {
         meetingId: metadata.meetingId || match.id,
         title: metadata.title || "Untitled Meeting",
         summary: metadata.summary || "No summary available.",
-        transcript: metadata.transcript || "",
+        transcript: metadata.text || metadata.transcript || "",
         createdAt: metadata.createdAt || null,
         similarityScore: parseFloat(match.score?.toFixed(3)) || 0,
         resultType: metadata.resultType || "meeting",

@@ -44,6 +44,33 @@ const ROOT_CLIENT_MAP = {
     "client/src/pages/CreateMeeting/hooks/__tests__/useSessionCards.persistence.test.jsx",
   "client/src/pages/SessionGallery.jsx":
     "client/src/pages/__tests__/SessionGallery.test.jsx",
+  "client/src/pages/MeetingROIDashboard.jsx":
+    "client/src/pages/__tests__/MeetingROIDashboard.test.jsx",
+  "client/src/services/meetingROIApi.js":
+    "client/src/pages/__tests__/MeetingROIDashboard.test.jsx",
+  "client/src/pages/AiMeetingNotesDashboard.jsx":
+    "client/src/pages/__tests__/AiMeetingNotesDashboard.test.jsx",
+  "client/src/services/aiMeetingNoteApi.js":
+    "client/src/pages/__tests__/AiMeetingNotesDashboard.test.jsx",
+ feature/breakout-rooms-facilitation-2453
+  "client/src/components/meeting-room/BreakoutRoomPanel.jsx":
+    "client/src/components/meeting-room/__tests__/BreakoutRoomPanel.test.jsx",
+  "client/src/components/meetings/BreakoutRoomPanel.jsx":
+    "client/src/components/meeting-room/__tests__/BreakoutRoomPanel.test.jsx",
+  "client/src/services/breakoutRoomApi.js":
+    "client/src/components/meeting-room/__tests__/BreakoutRoomPanel.test.jsx",
+  "client/src/api/breakoutRoomApi.js":
+    "client/src/components/meeting-room/__tests__/BreakoutRoomPanel.test.jsx",
+
+  "client/src/components/meetings/GuestAccessManager.jsx":
+    "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
+  "client/src/pages/GuestJoin.jsx":
+    "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
+  "client/src/pages/GuestMeetingView.jsx":
+    "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
+  "client/src/services/guestAccessApi.js":
+    "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
+ main
 };
 
 const directTests = [

@@ -16,12 +16,7 @@ import {
   BarChart3,
   Timer,
 } from "lucide-react";
-import {
-  BALANCE_CONFIG,
-  ROLE_CONFIG,
-  BalanceRating,
-  TrendDirection,
-} from "./speakingTypes";
+import { BALANCE_CONFIG, ROLE_CONFIG, BalanceRating } from "./speakingTypes";
 
 const ICON_MAP = {
   Mic,

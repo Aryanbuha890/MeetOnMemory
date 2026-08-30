@@ -14,9 +14,15 @@ import SaveFilterModal from "./SaveFilterModal.jsx";
 import { BookmarkPlus, ListChecks } from "lucide-react";
 import useBulkMeetingActions from "../../hooks/useBulkMeetingActions.js";
 import BulkActionBar from "./BulkActionBar.jsx";
+import { customFieldApi } from "../../api/customFieldApi.js";
+import AppContent from "../../context/AppContent";
 
 const MeetingRepository = () => {
   const navigate = useNavigate();
+  const { userData } = React.useContext(AppContent);
+  const organizationId =
+    userData?.organization?._id || userData?.organization || null;
+
   const [filteredMeetings, setFilteredMeetings] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
@@ -25,6 +31,9 @@ const MeetingRepository = () => {
     dateRange: "all",
     sortBy: "createdAt-desc",
   });
+
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
+  const [customFieldFilters, setCustomFieldFilters] = useState({});
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -120,6 +129,36 @@ const MeetingRepository = () => {
     handleBulkExport,
   } = useBulkMeetingActions(fetchMeetings);
 
+  useEffect(() => {
+    if (!organizationId) return;
+    customFieldApi
+      .getDefinitions(organizationId)
+      .then((res) => {
+        setCustomFieldDefinitions(res.data || []);
+      })
+      .catch((err) =>
+        console.error("Failed to load org custom field definitions", err),
+      );
+  }, [organizationId]);
+
+  const handleCustomFieldFilterChange = (fieldName, value) => {
+    setCustomFieldFilters((prev) => ({
+      ...prev,
+      [fieldName]: value,
+    }));
+  };
+
+  const handleClearAllFilters = () => {
+    setFilters({
+      status: "all",
+      meetingType: "all",
+      dateRange: "all",
+      sortBy: "createdAt-desc",
+    });
+    setCustomFieldFilters({});
+    setSearchQuery("");
+  };
+
   // Apply filters and search
   useEffect(() => {
     let filtered = [...(meetings || [])];
@@ -149,6 +188,23 @@ const MeetingRepository = () => {
         (meeting) => meeting.meetingType === filters.meetingType,
       );
     }
+
+    // Apply custom field facet filters
+    Object.keys(customFieldFilters).forEach((fieldName) => {
+      const filterVal = customFieldFilters[fieldName];
+      if (filterVal && filterVal !== "all" && filterVal !== "") {
+        filtered = filtered.filter((m) => {
+          if (!m.customFields || !Array.isArray(m.customFields)) return false;
+          return m.customFields.some(
+            (cf) =>
+              (cf.key === fieldName || cf.name === fieldName) &&
+              String(cf.value)
+                .toLowerCase()
+                .includes(String(filterVal).toLowerCase()),
+          );
+        });
+      }
+    });
 
     // Apply date range filter
     if (filters.dateRange !== "all") {
@@ -207,7 +263,7 @@ const MeetingRepository = () => {
 
     setFilteredMeetings(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [meetings, searchQuery, filters]);
+  }, [meetings, searchQuery, filters, customFieldFilters]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredMeetings.length / itemsPerPage);
@@ -352,7 +408,10 @@ const MeetingRepository = () => {
           <MeetingFilters
             filters={filters}
             onFilterChange={handleFilterChange}
-            onClearFilters={handleClearFilters}
+            onClearFilters={handleClearAllFilters}
+            customFieldDefinitions={customFieldDefinitions}
+            customFieldFilters={customFieldFilters}
+            onCustomFieldChange={handleCustomFieldFilterChange}
           />
           <button
             onClick={() => setIsSaveModalOpen(true)}

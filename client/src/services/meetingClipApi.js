@@ -28,6 +28,17 @@ const meetingClipApi = {
     );
     return response.data;
   },
+  trimClip: async (clipId, trimData) => {
+    const response = await apiClient.post(
+      `/api/clips/${clipId}/trim`,
+      trimData,
+    );
+    return response.data;
+  },
+  mergeClips: async (mergeData) => {
+    const response = await apiClient.post("/api/clips/merge", mergeData);
+    return response.data;
+  },
 };
 
 export default meetingClipApi;

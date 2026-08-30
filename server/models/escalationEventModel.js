@@ -27,6 +27,15 @@ const escalationEventSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["success", "failed", "pending"],
+      default: "success",
+    },
+    errorDetails: {
+      type: String,
+      default: "",
+    },
     triggeredAt: {
       type: Date,
       default: Date.now,

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import meetingClipApi from "../../services/meetingClipApi";
+import { io } from "socket.io-client";
+import { createClerkSocketOptions } from "../../services/apiClient";
 
 const CARD_CLASS =
   "bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6";
@@ -47,6 +49,17 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
   const playingRangeRef = useRef(null);
   const audioUrl = getAudioUrl(meeting);
 
+  const [selectedClipIds, setSelectedClipIds] = useState([]);
+  const [compilationTitle, setCompilationTitle] = useState("");
+  const [isMerging, setIsMerging] = useState(false);
+  const [mergeProgressId, setMergeProgressId] = useState(null);
+
+  const [trimmingClipId, setTrimmingClipId] = useState(null);
+  const [trimStart, setTrimStart] = useState("");
+  const [trimEnd, setTrimEnd] = useState("");
+
+  const [exportProgress, setExportProgress] = useState({});
+
   const fetchClips = useCallback(async () => {
     if (!meetingId) {
       setLoading(false);
@@ -75,6 +88,37 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
       setLoading(false);
     }
   }, [meetingId]);
+
+  useEffect(() => {
+    let socket;
+    const initSocket = async () => {
+      try {
+        const options = await createClerkSocketOptions();
+        socket = io(window.location.origin, options);
+        socket.on("clip.progress", (data) => {
+          if (data.clipId) {
+            setExportProgress((prev) => ({
+              ...prev,
+              [data.clipId]: data.error
+                ? `Error: ${data.error}`
+                : data.progress,
+            }));
+            if (data.progress === 100) {
+              fetchClips();
+            }
+          }
+        });
+      } catch (err) {
+        console.error("Clips socket connection error:", err);
+      }
+    };
+
+    initSocket();
+
+    return () => {
+      if (socket) socket.disconnect();
+    };
+  }, [fetchClips]);
 
   useEffect(() => {
     fetchClips();
@@ -151,6 +195,53 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
       }
       console.error(err);
     }
+  };
+
+  const handleTrimClip = async (e, clipId) => {
+    e.preventDefault();
+    try {
+      setError("");
+      setExportProgress((prev) => ({ ...prev, [clipId]: 0 }));
+      await meetingClipApi.trimClip(clipId, {
+        startTime: Number(trimStart),
+        endTime: Number(trimEnd),
+      });
+      setTrimmingClipId(null);
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to trim clip"));
+      console.error(err);
+    }
+  };
+
+  const handleMergeClips = async (e) => {
+    e.preventDefault();
+    if (selectedClipIds.length === 0) return;
+    try {
+      setError("");
+      setIsMerging(true);
+      const res = await meetingClipApi.mergeClips({
+        clipIds: selectedClipIds,
+        title: compilationTitle || "Merged Compilation",
+      });
+      const newCompilation = res.data || res;
+      setMergeProgressId(newCompilation._id);
+      setExportProgress((prev) => ({ ...prev, [newCompilation._id]: 0 }));
+      setCompilationTitle("");
+      setSelectedClipIds([]);
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to merge clips"));
+      console.error(err);
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
+  const handleToggleSelectClip = (clipId) => {
+    setSelectedClipIds((prev) =>
+      prev.includes(clipId)
+        ? prev.filter((id) => id !== clipId)
+        : [...prev, clipId],
+    );
   };
 
   const handleAddAnnotation = async (e, clipId) => {
@@ -397,6 +488,53 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3">
           Saved Clips ({clips.length})
         </h3>
+        {selectedClipIds.length > 0 && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-2">
+              Merge Compilation ({selectedClipIds.length} clips selected)
+            </h4>
+            <form
+              onSubmit={handleMergeClips}
+              className="flex flex-col sm:flex-row gap-3"
+            >
+              <input
+                type="text"
+                value={compilationTitle}
+                onChange={(e) => setCompilationTitle(e.target.value)}
+                placeholder="Compilation Title (e.g. Highlights)"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 outline-none"
+                required
+                data-testid="merge-title-input"
+              />
+              <button
+                type="submit"
+                disabled={isMerging}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded text-sm font-semibold transition"
+                data-testid="merge-submit-btn"
+              >
+                {isMerging ? "Merging..." : "Export Compilation"}
+              </button>
+            </form>
+            {mergeProgressId &&
+              exportProgress[mergeProgressId] !== undefined && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300 mb-1">
+                    <span>Export Progress</span>
+                    <span>{exportProgress[mergeProgressId]}%</span>
+                  </div>
+                  <div className="w-full bg-blue-200 dark:bg-blue-950 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${typeof exportProgress[mergeProgressId] === "number" ? exportProgress[mergeProgressId] : 0}%`,
+                      }}
+                      data-testid="merge-progress-bar"
+                    />
+                  </div>
+                </div>
+              )}
+          </div>
+        )}
         {clips.length === 0 ? (
           <p
             data-testid="clip-manager-empty"
@@ -413,69 +551,78 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                 className="border border-gray-200 dark:border-gray-700 rounded p-4 shadow-sm"
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-2">
-                  <div>
-                    {editingClipId === clip._id ? (
-                      <form
-                        onSubmit={(e) => handleUpdateClip(e, clip._id)}
-                        className="space-y-2"
-                      >
-                        <label
-                          className="sr-only"
-                          htmlFor={`edit-title-${clip._id}`}
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedClipIds.includes(clip._id)}
+                      onChange={() => handleToggleSelectClip(clip._id)}
+                      className="mt-1.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                      data-testid={`clip-checkbox-${clip._id}`}
+                    />
+                    <div>
+                      {editingClipId === clip._id ? (
+                        <form
+                          onSubmit={(e) => handleUpdateClip(e, clip._id)}
+                          className="space-y-2"
                         >
-                          Title
-                        </label>
-                        <input
-                          id={`edit-title-${clip._id}`}
-                          type="text"
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          className={INPUT_CLASS}
-                          required
-                        />
-                        <label
-                          className="sr-only"
-                          htmlFor={`edit-description-${clip._id}`}
-                        >
-                          Description
-                        </label>
-                        <input
-                          id={`edit-description-${clip._id}`}
-                          type="text"
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                          className={INPUT_CLASS}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="submit"
-                            className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                          <label
+                            className="sr-only"
+                            htmlFor={`edit-title-${clip._id}`}
                           >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingClipId(null)}
-                            className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
+                            Title
+                          </label>
+                          <input
+                            id={`edit-title-${clip._id}`}
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className={INPUT_CLASS}
+                            required
+                          />
+                          <label
+                            className="sr-only"
+                            htmlFor={`edit-description-${clip._id}`}
                           >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <>
-                        <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                          {clip.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {clip.description}
-                        </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">
-                          {formatTime(clip.startTime)} -{" "}
-                          {formatTime(clip.endTime)}
-                        </p>
-                      </>
-                    )}
+                            Description
+                          </label>
+                          <input
+                            id={`edit-description-${clip._id}`}
+                            type="text"
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            className={INPUT_CLASS}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="submit"
+                              className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingClipId(null)}
+                              className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            {clip.title}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {clip.description}
+                          </p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">
+                            {formatTime(clip.startTime)} -{" "}
+                            {formatTime(clip.endTime)}
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-3">
                     {audioUrl ? (
@@ -507,6 +654,20 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                         className="text-gray-600 dark:text-gray-300 text-sm hover:underline"
                       >
                         Edit
+                      </button>
+                    )}
+                    {canManage && trimmingClipId !== clip._id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTrimmingClipId(clip._id);
+                          setTrimStart(clip.startTime.toString());
+                          setTrimEnd(clip.endTime.toString());
+                        }}
+                        className="text-indigo-600 dark:text-indigo-400 text-sm hover:underline"
+                        data-testid={`clip-trim-btn-${clip._id}`}
+                      >
+                        Trim
                       </button>
                     )}
                     {canManage && (
@@ -627,13 +788,87 @@ const ClipManager = ({ meetingId, meeting, canManage = true }) => {
                         onClick={() => {
                           setActiveClipId(clip._id);
                           setAnnotationText("");
-                          setAnnotationTimestamp("");
+                          setAnnotationTimestamp(clip.startTime.toString());
                         }}
                         className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         + Add Annotation
                       </button>
                     ))}
+                  {trimmingClipId === clip._id && (
+                    <form
+                      onSubmit={(e) => handleTrimClip(e, clip._id)}
+                      className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg space-y-4"
+                      data-testid={`trim-form-${clip._id}`}
+                    >
+                      <h5 className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                        Trim Clip Boundaries
+                      </h5>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                            Start Time (seconds)
+                          </label>
+                          <input
+                            type="number"
+                            value={trimStart}
+                            onChange={(e) => setTrimStart(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                            min="0"
+                            required
+                            data-testid={`trim-start-input-${clip._id}`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                            End Time (seconds)
+                          </label>
+                          <input
+                            type="number"
+                            value={trimEnd}
+                            onChange={(e) => setTrimEnd(e.target.value)}
+                            className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                            min="0"
+                            required
+                            data-testid={`trim-end-input-${clip._id}`}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setTrimmingClipId(null)}
+                          className="px-3.5 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-xs font-bold transition"
+                          data-testid={`trim-submit-btn-${clip._id}`}
+                        >
+                          Submit Trim
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                  {exportProgress[clip._id] !== undefined && (
+                    <div className="mt-3.5 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-800">
+                      <div className="flex justify-between text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">
+                        <span>Rendering Clip Boundaries...</span>
+                        <span>{exportProgress[clip._id]}%</span>
+                      </div>
+                      <div className="w-full bg-gray-250 dark:bg-gray-950 rounded-full h-1 overflow-hidden">
+                        <div
+                          className="bg-blue-500 h-1 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${typeof exportProgress[clip._id] === "number" ? exportProgress[clip._id] : 0}%`,
+                          }}
+                          data-testid={`clip-progress-bar-${clip._id}`}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

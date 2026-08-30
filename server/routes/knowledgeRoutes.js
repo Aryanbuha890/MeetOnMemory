@@ -33,6 +33,8 @@ import {
   getConflicts,
   getConflictDetail,
   resolveConflict,
+  getConflictAuditHistory,
+  bulkResolveConflicts,
 } from "../controllers/conflictController.js";
 import {
   getSnapshots,
@@ -218,6 +220,19 @@ router.get(
   requireOrgMembership,
   requirePermission("knowledge", "view"),
   getConflicts,
+);
+router.get(
+  "/conflicts/audit-history",
+  requireOrgMembership,
+  requirePermission("knowledge", "view"),
+  getConflictAuditHistory,
+);
+router.post(
+  "/conflicts/bulk-resolve",
+  writeLimiter,
+  requireOrgMembership,
+  requirePermission("knowledge", "resolve_conflicts"),
+  bulkResolveConflicts,
 );
 router.get(
   "/conflicts/:id",

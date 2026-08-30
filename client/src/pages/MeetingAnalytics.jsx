@@ -4,6 +4,8 @@ import { usePolling } from "../hooks/usePolling.js";
 import apiClient from "../services/apiClient.js";
 import Navbar from "../components/Navbar.jsx";
 import RecordingSessionAnalyticsPanel from "../components/analytics/RecordingSessionAnalyticsPanel.jsx";
+import MeetingWorkloadHeatmap from "../components/analytics/MeetingWorkloadHeatmap.jsx";
+import TeamWorkloadTable from "../components/analytics/TeamWorkloadTable.jsx";
 import {
   BarChart,
   Bar,
@@ -44,6 +46,7 @@ const MeetingAnalytics = () => {
   const [error, setError] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [goalStats, setGoalStats] = useState([]);
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Owns the completion poll below, including its teardown on unmount (#1455).
   const { startPolling } = usePolling();
@@ -280,299 +283,346 @@ const MeetingAnalytics = () => {
               </button>
             </div>
           </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
+            <button
+              className={`px-4 py-2 font-medium text-sm transition-colors ${
+                activeTab === "overview"
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+              }`}
+              onClick={() => setActiveTab("overview")}
+            >
+              Overview
+            </button>
+            <button
+              className={`px-4 py-2 font-medium text-sm transition-colors ${
+                activeTab === "workload"
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+              }`}
+              onClick={() => setActiveTab("workload")}
+            >
+              Workload
+            </button>
+          </div>
         </div>
 
-        {/* Key Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <MetricCard
-            icon={Users}
-            label="Participants"
-            value={metrics.speakerCount}
-            subtitle={`of ${metrics.participantCount} total`}
-            color="blue"
-          />
-          <MetricCard
-            icon={Clock}
-            label="Duration"
-            value={formatDuration(metrics.totalDuration)}
-            subtitle={`${metrics.silencePeriods} silence periods`}
-            color="purple"
-          />
-          <MetricCard
-            icon={Activity}
-            label="Engagement"
-            value={`${metrics.engagementScore.toFixed(0)}%`}
-            subtitle="Overall score"
-            color="green"
-          />
-          <MetricCard
-            icon={Award}
-            label="Equity"
-            value={`${metrics.participationEquity.toFixed(0)}%`}
-            subtitle="Participation balance"
-            color="orange"
-          />
-        </div>
-
-        {/* Speaker Participation Chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-            Speaker Participation
-          </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={speakerChartData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percentage }) => `${name}: ${percentage}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="time"
-              >
-                {speakerChartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value, name, props) => [
-                  `${value} minutes (${props.payload.percentage}%)`,
-                  props.payload.name,
-                ]}
+        {activeTab === "overview" ? (
+          <>
+            {/* Key Metrics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <MetricCard
+                icon={Users}
+                label="Participants"
+                value={metrics.speakerCount}
+                subtitle={`of ${metrics.participantCount} total`}
+                color="blue"
               />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+              <MetricCard
+                icon={Clock}
+                label="Duration"
+                value={formatDuration(metrics.totalDuration)}
+                subtitle={`${metrics.silencePeriods} silence periods`}
+                color="purple"
+              />
+              <MetricCard
+                icon={Activity}
+                label="Engagement"
+                value={`${metrics.engagementScore.toFixed(0)}%`}
+                subtitle="Overall score"
+                color="green"
+              />
+              <MetricCard
+                icon={Award}
+                label="Equity"
+                value={`${metrics.participationEquity.toFixed(0)}%`}
+                subtitle="Participation balance"
+                color="orange"
+              />
+            </div>
 
-        {/* Goal Achievement Chart */}
-        {goalStats.length > 0 && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 mb-8">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <Target className="w-6 h-6 text-blue-500" />
-              Organizational Goal Achievement Rate
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart
-                data={goalStats}
-                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#334155"
-                />
-                <XAxis dataKey="monthName" stroke="#94a3b8" />
-                <YAxis unit="%" stroke="#94a3b8" />
-                <Tooltip
-                  formatter={(value) => [
-                    `${parseFloat(value).toFixed(1)}%`,
-                    "Achievement Rate",
-                  ]}
-                  contentStyle={{
-                    backgroundColor: "#1e293b",
-                    borderColor: "#334155",
-                    color: "#f8fafc",
-                  }}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="achievementRate"
-                  name="Achievement Rate"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  dot={{ r: 4, strokeWidth: 2 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Detailed Speaker Table */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-            Speaker Details
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    Speaker
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    Speaking Time
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    Interventions
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    Avg Length
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    Percentage
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {speakers.map((speaker, idx) => (
-                  <tr
-                    key={speaker.userId}
-                    className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+            {/* Speaker Participation Chart */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 mb-8">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
+                Speaker Participation
+              </h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={speakerChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="time"
                   >
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{
-                            backgroundColor: COLORS[idx % COLORS.length],
-                          }}
-                        />
-                        <span className="font-medium text-slate-900 dark:text-white">
-                          {speaker.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                      {formatDuration(speaker.totalTime)}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                      {speaker.interventionCount}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                      {formatDuration(speaker.averageInterventionLength)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <div
-                            className="h-2 rounded-full"
-                            style={{
-                              width: `${speaker.percentage}%`,
-                              backgroundColor: COLORS[idx % COLORS.length],
-                            }}
-                          />
-                        </div>
-                        <span className="text-sm text-slate-600 dark:text-slate-400 w-12">
-                          {speaker.percentage.toFixed(1)}%
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    {speakerChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name, props) => [
+                      `${value} minutes (${props.payload.percentage}%)`,
+                      props.payload.name,
+                    ]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
 
-        {/* AI Insights */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <Lightbulb className="w-6 h-6 text-yellow-500" />
-            AI-Powered Insights
-          </h2>
-          <div className="space-y-3">
-            {insights.length === 0 ? (
-              <p className="text-slate-600 dark:text-slate-400 text-center py-8">
-                No insights available
-              </p>
-            ) : (
-              insights.map((insight, idx) => (
-                <div
-                  key={idx}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    insight.type === "strength"
-                      ? "bg-green-50 dark:bg-green-900/20 border-green-500"
-                      : insight.type === "weakness"
-                        ? "bg-red-50 dark:bg-red-900/20 border-red-500"
-                        : insight.type === "recommendation"
-                          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
-                          : "bg-slate-50 dark:bg-slate-800 border-slate-500"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {insight.type === "strength" ? (
-                      <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
-                    ) : insight.type === "weakness" ? (
-                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                    ) : (
-                      <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                    )}
-                    <div className="flex-1">
-                      <p className="text-slate-900 dark:text-white font-medium mb-1">
-                        {insight.message}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                        <span className="capitalize">{insight.category}</span>
-                        <span>•</span>
-                        <span className="capitalize">
-                          {insight.impact} impact
-                        </span>
-                        {insight.actionable && (
-                          <>
-                            <span>•</span>
-                            <span className="text-blue-600 dark:text-blue-400">
-                              Actionable
+            {/* Goal Achievement Chart */}
+            {goalStats.length > 0 && (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 mb-8">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Target className="w-6 h-6 text-blue-500" />
+                  Organizational Goal Achievement Rate
+                </h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart
+                    data={goalStats}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#334155"
+                    />
+                    <XAxis dataKey="monthName" stroke="#94a3b8" />
+                    <YAxis unit="%" stroke="#94a3b8" />
+                    <Tooltip
+                      formatter={(value) => [
+                        `${parseFloat(value).toFixed(1)}%`,
+                        "Achievement Rate",
+                      ]}
+                      contentStyle={{
+                        backgroundColor: "#1e293b",
+                        borderColor: "#334155",
+                        color: "#f8fafc",
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="achievementRate"
+                      name="Achievement Rate"
+                      stroke="#3b82f6"
+                      strokeWidth={3}
+                      dot={{ r: 4, strokeWidth: 2 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Detailed Speaker Table */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 mb-8">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
+                Speaker Details
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Speaker
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Speaking Time
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Interventions
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Avg Length
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Percentage
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {speakers.map((speaker, idx) => (
+                      <tr
+                        key={speaker.userId}
+                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{
+                                backgroundColor: COLORS[idx % COLORS.length],
+                              }}
+                            />
+                            <span className="font-medium text-slate-900 dark:text-white">
+                              {speaker.name}
                             </span>
-                          </>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
+                          {formatDuration(speaker.totalTime)}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
+                          {speaker.interventionCount}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
+                          {formatDuration(speaker.averageInterventionLength)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                              <div
+                                className="h-2 rounded-full"
+                                style={{
+                                  width: `${speaker.percentage}%`,
+                                  backgroundColor: COLORS[idx % COLORS.length],
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm text-slate-600 dark:text-slate-400 w-12">
+                              {speaker.percentage.toFixed(1)}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* AI Insights */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6 mb-8">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <Lightbulb className="w-6 h-6 text-yellow-500" />
+                AI-Powered Insights
+              </h2>
+              <div className="space-y-3">
+                {insights.length === 0 ? (
+                  <p className="text-slate-600 dark:text-slate-400 text-center py-8">
+                    No insights available
+                  </p>
+                ) : (
+                  insights.map((insight, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-lg border-l-4 ${
+                        insight.type === "strength"
+                          ? "bg-green-50 dark:bg-green-900/20 border-green-500"
+                          : insight.type === "weakness"
+                            ? "bg-red-50 dark:bg-red-900/20 border-red-500"
+                            : insight.type === "recommendation"
+                              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
+                              : "bg-slate-50 dark:bg-slate-800 border-slate-500"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {insight.type === "strength" ? (
+                          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                        ) : insight.type === "weakness" ? (
+                          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                        ) : (
+                          <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                         )}
+                        <div className="flex-1">
+                          <p className="text-slate-900 dark:text-white font-medium mb-1">
+                            {insight.message}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <span className="capitalize">
+                              {insight.category}
+                            </span>
+                            <span>•</span>
+                            <span className="capitalize">
+                              {insight.impact} impact
+                            </span>
+                            {insight.actionable && (
+                              <>
+                                <span>•</span>
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  Actionable
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+                  ))
+                )}
+              </div>
+            </div>
 
-        {/* Meeting Metrics Summary */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-            Meeting Metrics Summary
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <MetricDetail
-              label="Total Silence Time"
-              value={formatDuration(metrics.totalSilenceTime)}
-              icon={Clock}
+            {/* Meeting Metrics Summary */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
+                Meeting Metrics Summary
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <MetricDetail
+                  label="Total Silence Time"
+                  value={formatDuration(metrics.totalSilenceTime)}
+                  icon={Clock}
+                />
+                <MetricDetail
+                  label="Avg Intervention Length"
+                  value={formatDuration(metrics.averageInterventionLength)}
+                  icon={Activity}
+                />
+                <MetricDetail
+                  label="Longest Intervention"
+                  value={formatDuration(metrics.longestIntervention)}
+                  icon={TrendingUp}
+                />
+                <MetricDetail
+                  label="Decision Density"
+                  value={`${metrics.decisionDensity.toFixed(1)}/hour`}
+                  icon={Target}
+                />
+                <MetricDetail
+                  label="Action Item Density"
+                  value={`${metrics.actionItemDensity.toFixed(1)}/hour`}
+                  icon={Target}
+                />
+                <MetricDetail
+                  label="Silence Periods"
+                  value={metrics.silencePeriods}
+                  icon={Clock}
+                />
+              </div>
+            </div>
+
+            {/* Recording Session Analytics Panel */}
+            <div className="mt-10">
+              <RecordingSessionAnalyticsPanel meetingId={meetingId} />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-8">
+            <MeetingWorkloadHeatmap
+              organizationId={
+                typeof analytics?.meeting?.organization === "object"
+                  ? analytics.meeting.organization._id
+                  : analytics?.meeting?.organization
+              }
             />
-            <MetricDetail
-              label="Avg Intervention Length"
-              value={formatDuration(metrics.averageInterventionLength)}
-              icon={Activity}
-            />
-            <MetricDetail
-              label="Longest Intervention"
-              value={formatDuration(metrics.longestIntervention)}
-              icon={TrendingUp}
-            />
-            <MetricDetail
-              label="Decision Density"
-              value={`${metrics.decisionDensity.toFixed(1)}/hour`}
-              icon={Target}
-            />
-            <MetricDetail
-              label="Action Item Density"
-              value={`${metrics.actionItemDensity.toFixed(1)}/hour`}
-              icon={Target}
-            />
-            <MetricDetail
-              label="Silence Periods"
-              value={metrics.silencePeriods}
-              icon={Clock}
+            <TeamWorkloadTable
+              organizationId={
+                typeof analytics?.meeting?.organization === "object"
+                  ? analytics.meeting.organization._id
+                  : analytics?.meeting?.organization
+              }
             />
           </div>
-        </div>
-
-        {/* Recording Session Analytics Panel */}
-        <div className="mt-10">
-          <RecordingSessionAnalyticsPanel meetingId={meetingId} />
-        </div>
+        )}
       </div>
     </div>
   );

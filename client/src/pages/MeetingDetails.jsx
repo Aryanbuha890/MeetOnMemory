@@ -62,6 +62,7 @@ import RetentionQuizSection from "../components/meetings/RetentionQuizSection";
 import ResourceConflictsPanel from "../components/meeting-details/ResourceConflictsPanel";
 import SkillEndorsementModal from "../components/meetings/SkillEndorsementModal";
 import DebriefQAPanel from "../components/meetings/DebriefQAPanel";
+import LiveQAPanel from "../components/meetings/LiveQAPanel";
 import DelegationPanel from "../components/meetings/DelegationPanel";
 import MeetingNudgesTab from "../components/meeting-details/MeetingNudgesTab.jsx";
 import ConvertToAsyncModal from "../components/meetings/ConvertToAsyncModal";
@@ -70,8 +71,12 @@ import ContributionSummaryPanel from "../components/MeetingDetails/ContributionS
 import MeetingCostCard from "../components/meeting-details/MeetingCostCard";
 import AbsenteeBriefingCard from "../components/meeting-details/AbsenteeBriefingCard";
 import PrintMomModal from "../components/meetings/PrintMomModal.jsx";
+import TransferOwnershipModal from "./meeting-details/TransferOwnershipModal";
 import ActionItemsList from "../components/actionItems/ActionItemsList";
+import DecisionVotingPanel from "../components/meetings/DecisionVotingPanel";
+import MindMapBoard from "../components/meetings/MindMapBoard";
 import { Printer } from "lucide-react";
+import RetrospectiveBoard from "../components/meeting-details/RetrospectiveBoard";
 
 const MeetingDetails = () => {
   const { id } = useParams();
@@ -92,6 +97,8 @@ const MeetingDetails = () => {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isEndorseModalOpen, setIsEndorseModalOpen] = useState(false);
   const [isConvertToAsyncOpen, setIsConvertToAsyncOpen] = useState(false);
+  const [isTransferOwnershipModalOpen, setIsTransferOwnershipModalOpen] =
+    useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [briefingStatus, setBriefingStatus] = useState("idle");
 
@@ -399,6 +406,15 @@ const MeetingDetails = () => {
                 Convert to Async
               </button>
             )}
+            {currentUser?.publicMetadata?.dbUserId === meeting.uploadedBy && (
+              <button
+                onClick={() => setIsTransferOwnershipModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium shadow-sm transition-colors text-sm"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                Transfer Ownership
+              </button>
+            )}
             <button
               onClick={() => setIsStoryViewerOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium shadow-sm hover:opacity-90 transition-opacity text-sm"
@@ -513,7 +529,10 @@ const MeetingDetails = () => {
           <div className="mb-6">
             <ContributionSummaryPanel meetingId={meeting._id} />
           </div>
-          <AbsenteeBriefingCard meetingId={meeting._id} />
+          <AbsenteeBriefingCard
+            meetingId={meeting._id}
+            isOrganizer={isOrganizer}
+          />
           <MeetingSummary meeting={meeting} />
 
           <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm mt-6 mb-6">
@@ -522,6 +541,17 @@ const MeetingDetails = () => {
               Tasks & Action Items
             </h2>
             <ActionItemsList meetingId={meeting._id} />
+          </div>
+
+          <div className="mt-6 mb-6">
+            <MindMapBoard
+              meetingId={meeting._id}
+              participants={meeting.participants}
+            />
+          </div>
+
+          <div className="mt-6 mb-6">
+            <DecisionVotingPanel meetingId={meeting._id} />
           </div>
 
           <RetentionQuizSection
@@ -578,6 +608,9 @@ const MeetingDetails = () => {
               />
             </div>
           </div>
+          <div className="mt-6 mb-6 h-[600px]">
+            <LiveQAPanel meetingId={meeting._id} isOrganizer={isOrganizer} />
+          </div>
           <div className="mt-6 mb-6">
             <TopicSummary
               meetingId={meeting._id}
@@ -613,6 +646,8 @@ const MeetingDetails = () => {
               }
             />
           </div>
+
+          <RetrospectiveBoard meetingId={meeting._id} />
 
           <div className="mt-6 mb-6">
             <SentimentTimeline meetingId={meeting._id} />
@@ -807,6 +842,13 @@ const MeetingDetails = () => {
         onClose={() => setIsPrintModalOpen(false)}
         meeting={meeting}
         summary={meeting.summary || meeting.structuredMoM}
+      />
+
+      <TransferOwnershipModal
+        isOpen={isTransferOwnershipModalOpen}
+        onClose={() => setIsTransferOwnershipModalOpen(false)}
+        meetingId={meeting._id}
+        meetingTitle={meeting.title}
       />
     </div>
   );

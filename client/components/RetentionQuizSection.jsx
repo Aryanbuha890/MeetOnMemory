@@ -10,20 +10,20 @@ export const RetentionQuizSection = ({ meetingId, isOrganizer }) => {
   const [opts, setOpts] = useState(["", "", "", ""]);
   const [correctIdx, setCorrectIdx] = useState(0);
 
+  const fetchQuestions = React.useCallback(async () => {
+    // API GET request wrap logic simulation
+    setQuestions((q) => q || []);
+  }, []);
+
+  const fetchAnalytics = React.useCallback(async () => {
+    // API simulation payload mapping logic
+    setAnalytics({ passRate: 85, totalAttempts: 20, perQuestionStats: [] });
+  }, []);
+
   useEffect(() => {
     fetchQuestions();
     if (isOrganizer) fetchAnalytics();
-  }, [meetingId]);
-
-  const fetchQuestions = async () => {
-    // API GET request wrap logic simulation
-    setQuestions(questions || []);
-  };
-
-  const fetchAnalytics = async () => {
-    // API simulation payload mapping logic
-    setAnalytics({ passRate: 85, totalAttempts: 20, perQuestionStats: [] });
-  };
+  }, [meetingId, isOrganizer, fetchQuestions, fetchAnalytics]);
 
   const handleAddQuestion = async () => {
     const newQuestion = {

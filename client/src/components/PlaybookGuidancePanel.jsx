@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Clock, CheckCircle, ChevronRight, AlertTriangle } from "lucide-react";
-import { useMeetingPlaybook } from "../hooks/useMeetingPlaybook";
 
 const PlaybookGuidancePanel = ({
-  socket,
-  meetingId,
   playbook,
+  playbookState,
+  advanceStep,
+  emitTimerWarning,
   isFacilitator,
 }) => {
-  const { playbookState, advanceStep, emitTimerWarning } = useMeetingPlaybook(
-    socket,
-    meetingId,
-  );
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   useEffect(() => {
-    if (!playbookState.isActive || !playbookState.startTime || !playbook)
+    if (!playbookState?.isActive || !playbookState.startTime || !playbook)
       return;
 
     const currentStep = playbook.steps[playbookState.currentStepIndex];
@@ -28,7 +24,6 @@ const PlaybookGuidancePanel = ({
       const remaining = Math.max(0, durationMs - elapsed);
       setTimeRemaining(remaining);
 
-      // Warning when < 1 minute remaining
       if (remaining < 60000 && remaining > 58000 && isFacilitator) {
         emitTimerWarning(playbookState.currentStepIndex);
       }
@@ -37,7 +32,7 @@ const PlaybookGuidancePanel = ({
     return () => clearInterval(interval);
   }, [playbookState, playbook, isFacilitator, emitTimerWarning]);
 
-  if (!playbook || !playbookState.isActive) {
+  if (!playbook || !playbookState?.isActive) {
     return null;
   }
 
@@ -61,6 +56,7 @@ const PlaybookGuidancePanel = ({
   return (
     <div
       className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border ${playbookState.timerWarning ? "border-red-500" : "border-gray-200 dark:border-gray-700"} p-4`}
+      data-testid="playbook-guidance-panel"
     >
       <div className="flex items-center gap-2 font-bold text-lg border-b dark:border-gray-700 pb-3 mb-3">
         <CheckCircle className="text-green-500" size={20} />
@@ -112,6 +108,7 @@ const PlaybookGuidancePanel = ({
         <div className="mt-6">
           {!isLastStep ? (
             <button
+              type="button"
               onClick={handleNextStep}
               className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center justify-center gap-2 transition-colors"
             >
@@ -119,6 +116,7 @@ const PlaybookGuidancePanel = ({
             </button>
           ) : (
             <button
+              type="button"
               disabled
               className="w-full py-2 bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed rounded-md"
             >

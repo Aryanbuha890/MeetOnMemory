@@ -6,6 +6,7 @@ import {
   deliverCatchUp,
   getMeetingCatchUp,
   generateMeetingCatchUp,
+  generateAndDeliverCatchUp,
 } from "../controllers/absenteeCatchUpController.js";
 
 const router = express.Router();
@@ -15,6 +16,8 @@ router.use(protect); // All routes require authentication
 router.get("/pending", getMyCatchUps);
 router.get("/meeting/:meetingId", getMeetingCatchUp);
 router.post("/meeting/:meetingId/generate", generateMeetingCatchUp);
+router.post("/meeting/:meetingId/generate-deliver", generateAndDeliverCatchUp);
+router.post("/generate-deliver", generateAndDeliverCatchUp);
 router.post("/:id/mark-read", markCatchUpAsRead);
 router.post("/:id/deliver", deliverCatchUp);
 

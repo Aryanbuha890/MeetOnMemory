@@ -8,6 +8,8 @@ const createBlockSchema = z.object({
   isRecurring: z.boolean().optional(),
   daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
   timezone: z.string().optional(),
+  allowOverride: z.boolean().optional(),
+  policy: z.enum(["warn", "block"]).optional(),
 });
 
 export const createFocusTimeBlock = async (req, res, next) => {
@@ -99,6 +101,29 @@ export const getFocusTimeAnalytics = async (req, res, next) => {
       end,
     );
     res.json(analytics);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const checkFocusTimeConflicts = async (req, res, next) => {
+  try {
+    const { startTime, endTime, userId } = req.query;
+
+    if (!startTime || !endTime) {
+      return res.status(400).json({
+        message: "startTime and endTime query parameters are required",
+      });
+    }
+
+    const targetUserId = userId || req.user._id;
+    const conflictResult = await FocusTimeService.checkConflicts(
+      targetUserId,
+      startTime,
+      endTime,
+    );
+
+    res.json(conflictResult);
   } catch (error) {
     next(error);
   }

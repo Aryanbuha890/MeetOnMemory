@@ -376,18 +376,7 @@ const DigestActions = ({ meetingId, onStatusUpdate, canManage = true }) => {
               </button>
             </div>
             <div className="flex-1 overflow-auto p-4 bg-slate-50 dark:bg-slate-950">
-              {previewLoading ? (
-                <div className="flex justify-center items-center h-64">
-                  <Loader2
-                    className="w-8 h-8 animate-spin text-blue-500"
-                    aria-label="Loading digest preview"
-                  />
-                </div>
-              ) : previewError && !previewHtml ? (
-                <div role="alert" className="text-center text-rose-600 py-12">
-                  {previewError}
-                </div>
-              ) : previewHtml ? (
+              {previewHtml || previewLoading || previewError ? (
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <button
@@ -415,8 +404,13 @@ const DigestActions = ({ meetingId, onStatusUpdate, canManage = true }) => {
                   </div>
                   {previewTab === "html" ? (
                     <SandboxedHtmlPreview
-                      htmlContent={previewHtml}
+                      htmlContent={previewHtml || ""}
                       title="Email Preview"
+                      size="lg"
+                      theme="auto"
+                      loading={previewLoading}
+                      error={previewError}
+                      onRetry={handlePreview}
                     />
                   ) : (
                     <pre

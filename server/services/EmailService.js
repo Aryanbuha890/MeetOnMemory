@@ -37,6 +37,27 @@ class EmailService {
       html,
     });
   }
+
+  /**
+   * Send regular or batch notification email
+   */
+  static async sendNotificationEmail(to, title, description) {
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #2563eb;">${title}</h2>
+        <p>${description}</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="font-size: 11px; color: #666;">You received this because of your MeetOnMemory notification preferences.</p>
+      </div>
+    `;
+
+    return this.sendMail({
+      from: process.env.SENDER_EMAIL || "no-reply@meetonmemory.com",
+      to,
+      subject: title,
+      html,
+    });
+  }
 }
 
 export default EmailService;

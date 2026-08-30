@@ -465,6 +465,17 @@ export const useScheduleMeeting = ({
       }
     }
 
+    const hasHardFocusBlock = focusConflicts.some(
+      (c) => c.policy === "block" || c.allowOverride === false,
+    );
+
+    if (hasHardFocusBlock) {
+      toast.error(
+        "Scheduling is blocked by a strict Focus Time block. Override is not permitted.",
+      );
+      return;
+    }
+
     const hasConflicts =
       focusConflicts.length > 0 || busyParticipants.length > 0;
     if (hasConflicts && conflictMode === "hard") {

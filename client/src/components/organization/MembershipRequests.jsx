@@ -12,6 +12,9 @@ import {
   Calendar,
   AlertCircle,
   ShieldAlert,
+  MessageSquare,
+  Send,
+  Timer,
 } from "lucide-react";
 
 const STATUS_STYLES = {
@@ -23,6 +26,8 @@ const STATUS_STYLES = {
     "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
   cancelled:
     "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600",
+  expired:
+    "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800",
 };
 
 const STATUS_LABELS = {
@@ -30,6 +35,7 @@ const STATUS_LABELS = {
   approved: "Approved",
   rejected: "Rejected",
   cancelled: "Cancelled",
+  expired: "Expired",
 };
 
 const MembershipRequests = ({ organizationId }) => {
@@ -40,6 +46,39 @@ const MembershipRequests = ({ organizationId }) => {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [newComment, setNewComment] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [expandedComments, setExpandedComments] = useState({});
+
+  const toggleComments = (requestId) => {
+    setExpandedComments((prev) => ({
+      ...prev,
+      [requestId]: !prev[requestId],
+    }));
+  };
+
+  const handleAddComment = async (requestId) => {
+    if (!newComment || !newComment.trim()) return;
+    try {
+      setCommentLoading(true);
+      const { data } = await membershipRequestApi.addComment(
+        requestId,
+        newComment.trim(),
+      );
+      if (data.success) {
+        toast.success("Comment added");
+        setNewComment("");
+        await fetchRequests();
+      } else {
+        toast.error(data.message || "Failed to add comment");
+      }
+    } catch (err) {
+      console.error("Error adding comment:", err);
+      toast.error(err.response?.data?.message || "Failed to add comment");
+    } finally {
+      setCommentLoading(false);
+    }
+  };
 
   // Multi-select & Bulk Action states
   const [selectedIds, setSelectedIds] = useState([]);
@@ -326,6 +365,7 @@ const MembershipRequests = ({ organizationId }) => {
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
           <option value="cancelled">Cancelled</option>
+          <option value="expired">Expired</option>
           <option value="all">All</option>
         </select>
       </div>
@@ -527,15 +567,99 @@ const MembershipRequests = ({ organizationId }) => {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       <span>Requested {formatDate(request.createdAt)}</span>
                     </div>
+                    {request.expiresAt && isPending && (
+                      <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                        <Timer className="h-3 w-3" />
+                        <span>Expires {formatDate(request.expiresAt)}</span>
+                      </div>
+                    )}
                     {request.reviewedAt && (
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         <span>Reviewed {formatDate(request.reviewedAt)}</span>
+                      </div>
+                    )}
+                    {request.reviewNotes && (
+                      <div className="w-full mt-1 p-2 rounded bg-slate-50 dark:bg-slate-800 text-xs">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          Admin note:
+                        </span>{" "}
+                        <span className="text-slate-600 dark:text-slate-400">
+                          {request.reviewNotes}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Comments Toggle & Thread */}
+                  <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => toggleComments(request._id)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      <span>Comments ({request.comments?.length || 0})</span>
+                    </button>
+
+                    {expandedComments[request._id] && (
+                      <div className="mt-2 space-y-2">
+                        {request.comments?.length > 0 ? (
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            {request.comments.map((c, idx) => (
+                              <div
+                                key={idx}
+                                className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-xs space-y-0.5"
+                              >
+                                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                    {c.author?.name || "User"}
+                                  </span>
+                                  <span>{formatDate(c.createdAt)}</span>
+                                </div>
+                                <p className="text-slate-700 dark:text-slate-200">
+                                  {c.text}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">
+                            No comments yet.
+                          </p>
+                        )}
+
+                        {/* Add Comment Input */}
+                        <div className="flex items-center gap-2 pt-1">
+                          <input
+                            type="text"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder="Write a comment..."
+                            maxLength={1000}
+                            className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleAddComment(request._id);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddComment(request._id)}
+                            disabled={commentLoading || !newComment.trim()}
+                            className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Send className="h-3 w-3" />
+                            <span>Post</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -553,6 +677,9 @@ const MembershipRequests = ({ organizationId }) => {
                   )}
                   {request.status === "rejected" && <X className="h-3 w-3" />}
                   {request.status === "cancelled" && <X className="h-3 w-3" />}
+                  {request.status === "expired" && (
+                    <Timer className="h-3 w-3" />
+                  )}
                   {STATUS_LABELS[request.status]}
                 </span>
 

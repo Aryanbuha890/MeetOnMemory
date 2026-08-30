@@ -38,6 +38,23 @@ export const customFieldApi = {
       `/api/custom-fields/meeting/${meetingId}`,
       {
         fields,
+        customFields: fields,
+      },
+    );
+    return res.data;
+  },
+
+  getMeetingsWithFacets: async (filters = []) => {
+    const res = await apiClient.post(`/api/custom-fields/query`, { filters });
+    return res.data;
+  },
+
+  updateMeetingCustomFields: async (meetingId, customFields) => {
+    const res = await apiClient.post(
+      `/api/custom-fields/meeting/${meetingId}`,
+      {
+        customFields,
+        fields: customFields,
       },
     );
     return res.data;

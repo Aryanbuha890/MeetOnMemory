@@ -85,7 +85,7 @@ export const respondToRsvp = async (req, res) => {
 
     const meeting = access.meeting;
 
-    // 2. Verify authorization to RSVP (must be owner, admin, listed participant, or have an existing RSVP)
+    // 2. Verify authorization to RSVP (must be owner, admin, listed participant, or have an existing RSVP, or access to meeting org)
     const isOwner = meeting.uploadedBy?.toString() === userId.toString();
     const isAdmin = req.user.role === "admin" || req.user.role === "owner";
     const isParticipant = meeting.participants?.some(
@@ -99,14 +99,40 @@ export const respondToRsvp = async (req, res) => {
     const hasExistingRsvp = await MeetingRsvp.findOne({ meetingId, userId });
 
     if (!isOwner && !isAdmin && !isParticipant && !hasExistingRsvp) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Forbidden: You are not invited or authorized to RSVP for this meeting",
-      });
+      // If user has organization access or invite access, allow them to RSVP
+      const isInSameOrg =
+        meeting.organization &&
+        req.user.organization &&
+        meeting.organization.toString() === req.user.organization.toString();
+
+      if (!isInSameOrg) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Forbidden: You are not invited or authorized to RSVP for this meeting",
+        });
+      }
     }
 
-    // 3. Perform upsert
+    // 3. Enforce capacity limit when accepting
+    if (status === "accepted" && meeting.maxParticipants) {
+      const acceptedCount = (meeting.participants || []).filter(
+        (p) =>
+          p.rsvpStatus === "accepted" &&
+          p.user?.toString() !== userId.toString(),
+      ).length;
+
+      if (acceptedCount >= meeting.maxParticipants) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Meeting has reached maximum capacity. You can join the waitlist instead.",
+          isFull: true,
+        });
+      }
+    }
+
+    // 4. Perform upsert
     const updatedRsvp = await updateRsvpStatus(meetingId, userId, {
       status,
       declineReason,

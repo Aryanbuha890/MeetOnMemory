@@ -9,6 +9,7 @@ import {
   cancelMembershipRequest,
   bulkApproveMembershipRequests,
   bulkRejectMembershipRequests,
+  addCommentToMembershipRequest,
 } from "../controllers/membershipRequestController.js";
 import userAuth from "../middleware/userAuth.js";
 import { apiLimiter, writeLimiter } from "../middleware/rateLimiter.js";
@@ -43,6 +44,15 @@ router.get(
   getUserMembershipRequests,
 );
 
+// Comments on request
+router.post(
+  "/:id/comments",
+  writeLimiter,
+  requireOrgMembership,
+  requirePermission("team_members", "view"),
+  addCommentToMembershipRequest,
+);
+
 // Manage requests
 router.patch(
   "/:id/approve",
@@ -56,12 +66,7 @@ router.patch(
   requirePermission("team_members", "invite"),
   rejectMembershipRequest,
 );
-router.patch(
-  "/:id/cancel",
-  writeLimiter,
-  requirePermission("team_members", "invite"),
-  cancelMembershipRequest,
-);
+router.patch("/:id/cancel", writeLimiter, cancelMembershipRequest);
 
 // Bulk actions
 router.post(

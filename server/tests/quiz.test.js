@@ -1,8 +1,5 @@
 // server/tests/quiz.test.js
-import {
-  updateQuizBank,
-  getQuizAnalytics,
-} from "../controllers/meetingQuizController";
+import { updateQuizBank } from "../controllers/meetingQuizController";
 
 describe("Retention Quiz Pipeline Integration Suite", () => {
   const targetMeetingId = "meet-772";

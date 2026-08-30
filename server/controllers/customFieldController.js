@@ -1,5 +1,6 @@
 import { z } from "zod";
 import customFieldService from "../services/customFieldService.js";
+import Meeting from "../models/meetingModel.js";
 
 const createDefinitionSchema = z.object({
   name: z.string().min(1),
@@ -143,5 +144,104 @@ export const getMeetingFields = async (req, res) => {
     res.status(200).json({ success: true, data: fields });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Handles dynamic faceted filtering across user-defined metadata arrays.
+ */
+export const getMeetingsWithFacets = async (req, res) => {
+  try {
+    const orgId = resolveAuthenticatedOrgId(req);
+    if (!orgId) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Organization membership required",
+      });
+    }
+
+    const filters = req.body?.filters || req.query?.filters;
+    let parsedFilters = [];
+    if (typeof filters === "string") {
+      try {
+        parsedFilters = JSON.parse(filters);
+      } catch {
+        parsedFilters = [];
+      }
+    } else if (Array.isArray(filters)) {
+      parsedFilters = filters;
+    }
+
+    const query = { organization: orgId };
+
+    if (parsedFilters.length > 0) {
+      query.customFields = {
+        $all: parsedFilters.map((f) => ({
+          $elemMatch: {
+            ...(f.key || f.name
+              ? { $or: [{ key: f.key || f.name }, { name: f.key || f.name }] }
+              : {}),
+            ...(f.definitionId ? { definitionId: f.definitionId } : {}),
+            value: f.value,
+          },
+        })),
+      };
+    }
+
+    const meetings = await Meeting.find(query).sort({ createdAt: -1 }).lean();
+
+    return res.status(200).json({
+      success: true,
+      meetings,
+      data: meetings,
+      total: meetings.length,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch faceted meeting records.",
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Persists meeting custom metadata array.
+ */
+export const updateMeetingCustomFields = async (req, res) => {
+  try {
+    const meetingId = req.params.meetingId || req.body.meetingId;
+    const orgId = resolveAuthenticatedOrgId(req);
+    const customFields = req.body.customFields || req.body.fields;
+
+    if (!orgId) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Organization membership required",
+      });
+    }
+
+    if (Array.isArray(customFields)) {
+      await customFieldService.setMeetingFields(meetingId, orgId, customFields);
+    }
+
+    const updatedMeeting = await Meeting.findById(meetingId).lean();
+    if (!updatedMeeting) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Target meeting profile not found." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: updatedMeeting,
+      meeting: updatedMeeting,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: "Failed to persist metadata changes.",
+      details: error.message,
+    });
   }
 };

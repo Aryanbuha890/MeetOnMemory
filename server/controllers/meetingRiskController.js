@@ -1,5 +1,6 @@
 import MeetingRisk from "../models/meetingRiskModel.js";
 import Meeting from "../models/meetingModel.js";
+import RiskEscalation from "../models/riskEscalationModel.js";
 import { calculateRiskScore } from "../services/riskScoringService.js";
 import {
   risksToCsv,
@@ -241,6 +242,73 @@ export const linkActionItem = async (req, res) => {
     res.status(200).json({ success: true, data: updatedRisk });
   } catch (error) {
     console.error("Error linking action item:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const mitigateRisk = async (req, res) => {
+  try {
+    const { riskId } = req.params;
+    const { mitigationPlan, ownerId } = req.body;
+
+    if (!mitigationPlan) {
+      return res.status(400).json({
+        success: false,
+        message: "Mitigation plan is required",
+      });
+    }
+
+    const risk = await MeetingRisk.findById(riskId);
+    if (!risk) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Risk not found" });
+    }
+
+    risk.mitigationPlan = mitigationPlan;
+    if (ownerId) risk.ownerId = ownerId;
+    risk.status = "Mitigated";
+
+    await risk.save();
+
+    res.status(200).json({ success: true, data: risk });
+  } catch (error) {
+    console.error("Error mitigating risk:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getRiskDashboard = async (req, res) => {
+  try {
+    const orgId = req.user.organization;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: "User is not part of an organization.",
+      });
+    }
+
+    const risks = await MeetingRisk.find({ organizationId: orgId })
+      .populate("meetingId", "title date")
+      .populate("ownerId", "firstName lastName avatar name email")
+      .sort({ riskScore: -1, createdAt: -1 });
+
+    const escalations = await RiskEscalation.find({ organizationId: orgId })
+      .populate({
+        path: "riskId",
+        select: "title riskScore status",
+      })
+      .sort("-escalatedAt");
+
+    res.status(200).json({
+      success: true,
+      data: {
+        risks,
+        escalations,
+      },
+    });
+  } catch (error) {
+    console.error("Error loading risk dashboard:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

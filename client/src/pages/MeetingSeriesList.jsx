@@ -231,6 +231,12 @@ const MeetingSeriesList = () => {
 
                     <div className="flex flex-wrap gap-2">
                       <Link
+                        to={`/meeting-series/${item._id}/evolution`}
+                        className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300"
+                      >
+                        Evolution
+                      </Link>
+                      <Link
                         to={`/meeting-series/${item._id}/retrospective`}
                         className="rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300"
                       >

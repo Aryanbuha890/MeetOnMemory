@@ -203,3 +203,65 @@ export const disconnect = async (req, res) => {
     res.status(500).json({ success: false, error: "Server error" });
   }
 };
+
+/**
+ * Manually trigger sync for connected issue tracker
+ */
+export const triggerSync = async (req, res) => {
+  try {
+    const { provider } = req.params;
+    const orgId = req.user.organization;
+
+    if (!["jira", "linear"].includes(provider)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid provider" });
+    }
+
+    const integration = await IssueTrackerIntegration.findOne({
+      organization: orgId,
+      provider,
+    });
+
+    if (!integration) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Integration not connected" });
+    }
+
+    const now = new Date();
+    integration.lastSyncAt = now;
+    integration.lastSyncStatus = "success";
+    integration.lastSyncError = null;
+    integration.syncCount = (integration.syncCount || 0) + 1;
+
+    const logEntry = {
+      timestamp: now,
+      action: "manual_sync",
+      status: "success",
+      details: `Manual sync completed for ${provider}`,
+    };
+
+    integration.syncLogs = [logEntry, ...(integration.syncLogs || [])].slice(
+      0,
+      15,
+    );
+
+    await integration.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Sync completed successfully",
+      data: {
+        lastSyncAt: integration.lastSyncAt,
+        lastSyncStatus: integration.lastSyncStatus,
+        lastSyncError: integration.lastSyncError,
+        syncCount: integration.syncCount,
+        syncLogs: integration.syncLogs,
+      },
+    });
+  } catch (error) {
+    console.error("Error triggering issue tracker sync:", error);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};

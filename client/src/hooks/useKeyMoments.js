@@ -7,6 +7,7 @@ export const useKeyMoments = (meetingId) => {
   const [moments, setMoments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
   const backendUrl =
     import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
@@ -109,13 +110,35 @@ export const useKeyMoments = (meetingId) => {
     await keyMomentApi.deleteMoment(id);
   };
 
+  const exportMoments = async () => {
+    if (!meetingId) return;
+    try {
+      setIsExporting(true);
+      const blobData = await keyMomentApi.exportMoments(meetingId);
+      const url = window.URL.createObjectURL(
+        new Blob([blobData], { type: "text/csv" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `session-${meetingId}-moments.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return {
     moments,
     isLoading,
     error,
+    isExporting,
     addMoment,
     updateMoment,
     removeMoment,
+    exportMoments,
     refresh: fetchMoments,
   };
 };

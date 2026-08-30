@@ -55,15 +55,24 @@ export const runMembershipTransaction = async (work) => {
  *
  * @param {import("mongoose").Document} membership populated with organization
  * @param {string} role
+ * @param {string|null} [changedById=null]
+ * @param {string} [reason=""]
  * @returns {Promise<{ membership: import("mongoose").Document, userSynced: boolean, unchanged: boolean }>}
  */
-export const syncMembershipAndUserRole = async (membership, role) => {
+export const syncMembershipAndUserRole = async (
+  membership,
+  role,
+  changedById = null,
+  reason = "",
+) => {
   if (!membership) {
     throw new NotFoundError("Membership not found.");
   }
 
-  if (!role || !["admin", "member"].includes(role)) {
-    throw new ValidationError("Invalid role. Must be 'admin' or 'member'.");
+  if (!role || !["owner", "admin", "member", "viewer"].includes(role)) {
+    throw new ValidationError(
+      "Invalid role. Must be 'owner', 'admin', 'member', or 'viewer'.",
+    );
   }
 
   // Avoid duplicate writes when nothing would change.
@@ -71,10 +80,21 @@ export const syncMembershipAndUserRole = async (membership, role) => {
     return { membership, userSynced: false, unchanged: true };
   }
 
+  const previousRole = membership.role;
   const orgId = membership.organization?._id || membership.organization;
 
   return runMembershipTransaction(async (session) => {
     membership.role = role;
+    if (!Array.isArray(membership.roleHistory)) {
+      membership.roleHistory = [];
+    }
+    membership.roleHistory.push({
+      previousRole,
+      newRole: role,
+      changedBy: changedById,
+      changedAt: new Date(),
+      reason: reason || "",
+    });
     await membership.save(session ? { session } : undefined);
 
     const targetUser = await userModel

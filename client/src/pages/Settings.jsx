@@ -41,6 +41,7 @@ import {
 import { validateRedirect } from "../utils/validateRedirect.js";
 import { usePolling } from "../hooks/usePolling.js";
 import PushNotificationManager from "../components/notifications/PushNotificationManager.jsx";
+import NotificationRoutingSettings from "../components/notifications/NotificationRoutingSettings.jsx";
 import PwaInstallButton from "../components/pwa/PwaInstallButton.jsx";
 import DataExportSection from "../components/settings/DataExportSection.jsx";
 import ClerkSecuritySection from "../components/settings/ClerkSecuritySection.jsx";
@@ -811,6 +812,11 @@ const Settings = () => {
           {/* Keyword Watchlist Section */}
           <div className="fade-in-up stagger-4">
             <KeywordWatchlistPanel />
+          </div>
+
+          {/* Notification Routing Settings Section */}
+          <div className="fade-in-up stagger-4">
+            <NotificationRoutingSettings />
           </div>
 
           {/* Email Digest Section */}

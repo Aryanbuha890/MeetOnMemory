@@ -12,6 +12,7 @@ vi.mock("../../../services", () => ({
     rejectRequest: vi.fn(),
     bulkApproveRequests: vi.fn(),
     bulkRejectRequests: vi.fn(),
+    addComment: vi.fn(),
   },
 }));
 
@@ -316,5 +317,38 @@ describe("MembershipRequests Component - Multi-select and Bulk Actions (#2018)",
     });
 
     expect(toast.success).toHaveBeenCalledWith("Membership request approved");
+  });
+
+  it("renders comments button and allows adding comments", async () => {
+    membershipRequestApi.addComment.mockResolvedValue({
+      data: { success: true },
+    });
+
+    render(<MembershipRequests organizationId="org-123" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Alice Johnson")).toBeInTheDocument();
+    });
+
+    const commentBtns = screen.getAllByText(/Comments \(0\)/i);
+    expect(commentBtns.length).toBeGreaterThan(0);
+    fireEvent.click(commentBtns[0]);
+
+    const commentInput = screen.getByPlaceholderText("Write a comment...");
+    expect(commentInput).toBeInTheDocument();
+
+    fireEvent.change(commentInput, {
+      target: { value: "Reviewing this today" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /post/i }));
+
+    await waitFor(() => {
+      expect(membershipRequestApi.addComment).toHaveBeenCalledWith(
+        "req-1",
+        "Reviewing this today",
+      );
+    });
+
+    expect(toast.success).toHaveBeenCalledWith("Comment added");
   });
 });

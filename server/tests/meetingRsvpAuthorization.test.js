@@ -178,6 +178,44 @@ describe("Meeting RSVP Authorization & IDOR Tests (#1673)", () => {
 
       expect(res.status).toBe(404);
     });
+
+    it("allows joining waitlist and tracks waitlist transition (#2485)", async () => {
+      currentUser = BOB_ORG_A;
+
+      const res = await request(app)
+        .put(`/api/rsvps/${meetingA._id}/respond`)
+        .send({
+          status: "waitlisted",
+          availabilityNote: "Can join if spot opens",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.status).toBe("waitlisted");
+
+      const updatedMeeting = await Meeting.findById(meetingA._id);
+      expect(updatedMeeting.waitlist).toHaveLength(1);
+      expect(updatedMeeting.waitlist[0].user.toString()).toBe(
+        BOB_ORG_A._id.toString(),
+      );
+      expect(updatedMeeting.waitlist[0].note).toBe("Can join if spot opens");
+    });
+
+    it("enforces max capacity rules and prevents accepting when meeting is full (#2485)", async () => {
+      meetingA.maxParticipants = 1;
+      meetingA.participants[0].rsvpStatus = "accepted";
+      await meetingA.save();
+
+      currentUser = BOB_ORG_A;
+
+      const res = await request(app)
+        .put(`/api/rsvps/${meetingA._id}/respond`)
+        .send({ status: "accepted" });
+
+      expect(res.status).toBe(409);
+      expect(res.body.success).toBe(false);
+      expect(res.body.isFull).toBe(true);
+    });
   });
 
   describe("RSVP Summary Retrieval", () => {

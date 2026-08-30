@@ -78,7 +78,7 @@ const createCommentNotification = async (comment, meeting, author) => {
       description: description,
       category: "meetings",
       isRead: false,
-      actionUrl: `/meetings/${meeting._id}#comment-${comment._id}`,
+      actionUrl: `/meeting/${meeting._id}#comment-${comment._id}`,
       actionLabel: "View Comment",
       metadata: {
         meetingId: meeting._id,

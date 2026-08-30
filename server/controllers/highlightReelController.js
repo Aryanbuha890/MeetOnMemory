@@ -76,3 +76,32 @@ export const exportHighlightReelHtml = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const updateHighlightReel = async (req, res) => {
+  try {
+    const { meetingId } = req.params;
+    const organizationId = req.user.organization;
+    const { narrative, highlights } = req.body;
+
+    const meeting = await Meeting.findOne({
+      _id: meetingId,
+      organization: organizationId,
+    });
+    if (!meeting) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Meeting not found" });
+    }
+
+    const reel = await highlightReelService.updateHighlightReel(
+      meetingId,
+      organizationId,
+      { narrative, highlights },
+    );
+
+    res.status(200).json({ success: true, data: reel });
+  } catch (error) {
+    console.error("Error updating highlight reel:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

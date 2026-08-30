@@ -1,5 +1,9 @@
 /**
- * Data models and constants for the Speaking Time Analytics Dashboard.
+ * Shared presentation types and configuration for Speaking Time Analytics.
+ *
+ * Runtime speaking data is supplied by speakingTimeApi. This module contains
+ * only stable UI metadata; it intentionally does not contain sample members
+ * or generated meeting statistics.
  */
 
 export const SpeakingRole = {
@@ -14,18 +18,6 @@ export const BalanceRating = {
   GOOD: "good",
   BIASED: "biased",
   DOMINATED: "dominated",
-};
-
-export const TrendDirection = {
-  IMPROVING: "improving",
-  STABLE: "stable",
-  DECLINING: "declining",
-};
-
-export const TimeRange = {
-  WEEK: "week",
-  MONTH: "month",
-  QUARTER: "quarter",
 };
 
 export const BALANCE_CONFIG = {
@@ -79,91 +71,9 @@ export const ROLE_CONFIG = {
     color: "#22c55e",
     icon: "User",
   },
-  [SpeakingRole.OBSERVER]: { label: "Observer", color: "#6b7280", icon: "Eye" },
+  [SpeakingRole.OBSERVER]: {
+    label: "Observer",
+    color: "#6b7280",
+    icon: "Eye",
+  },
 };
-
-export const MOCK_MEMBERS = [
-  {
-    id: "m1",
-    name: "Sarah Chen",
-    role: SpeakingRole.FACILITATOR,
-    department: "Product",
-    avatar: "SC",
-  },
-  {
-    id: "m2",
-    name: "James Wilson",
-    role: SpeakingRole.PRESENTER,
-    department: "Engineering",
-    avatar: "JW",
-  },
-  {
-    id: "m3",
-    name: "Priya Sharma",
-    role: SpeakingRole.PARTICIPANT,
-    department: "Design",
-    avatar: "PS",
-  },
-  {
-    id: "m4",
-    name: "Alex Rivera",
-    role: SpeakingRole.PARTICIPANT,
-    department: "Engineering",
-    avatar: "AR",
-  },
-  {
-    id: "m5",
-    name: "Emma Thompson",
-    role: SpeakingRole.PARTICIPANT,
-    department: "Engineering",
-    avatar: "ET",
-  },
-  {
-    id: "m6",
-    name: "David Kim",
-    role: SpeakingRole.PARTICIPANT,
-    department: "Engineering",
-    avatar: "DK",
-  },
-  {
-    id: "m7",
-    name: "Lisa Park",
-    role: SpeakingRole.PARTICIPANT,
-    department: "Operations",
-    avatar: "LP",
-  },
-  {
-    id: "m8",
-    name: "Marcus Johnson",
-    role: SpeakingRole.PARTICIPANT,
-    department: "Engineering",
-    avatar: "MJ",
-  },
-  {
-    id: "m9",
-    name: "Rachel Green",
-    role: SpeakingRole.PARTICIPANT,
-    department: "Marketing",
-    avatar: "RG",
-  },
-  {
-    id: "m10",
-    name: "Tom Harris",
-    role: SpeakingRole.OBSERVER,
-    department: "Sales",
-    avatar: "TH",
-  },
-];
-
-export const MOCK_MEETING_TYPES = [
-  "Standup",
-  "Sprint Planning",
-  "Retrospective",
-  "Design Review",
-  "Architecture Review",
-  "1-on-1",
-  "All Hands",
-  "Brainstorm",
-  "Client Sync",
-  "Technical Deep Dive",
-];

@@ -64,6 +64,20 @@ const meetingClipSchema = new mongoose.Schema(
       },
     ],
     annotations: [annotationSchema],
+    fileUrl: {
+      type: String,
+      default: "",
+    },
+    isCompilation: {
+      type: Boolean,
+      default: false,
+    },
+    mergedClips: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "MeetingClip",
+      },
+    ],
   },
   { timestamps: true },
 );

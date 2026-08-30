@@ -3,6 +3,11 @@ import { normalizeAgendaItems } from "../utils/agendaOrdering.js";
 
 const meetingSchema = new mongoose.Schema(
   {
+    clonedFrom: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Meeting",
+      default: null,
+    },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -63,6 +68,17 @@ const meetingSchema = new mongoose.Schema(
       type: String, // Location/platform (e.g., "Zoom", "Conference Room A")
       default: "",
     },
+    customFields: [
+      {
+        key: { type: String },
+        name: { type: String },
+        value: { type: mongoose.Schema.Types.Mixed },
+        definitionId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "CustomFieldDefinition",
+        },
+      },
+    ],
     allowObservers: {
       type: Boolean,
       default: false,
@@ -79,6 +95,10 @@ const meetingSchema = new mongoose.Schema(
       lat: { type: Number, default: null },
       lng: { type: Number, default: null },
     },
+    maxParticipants: {
+      type: Number,
+      default: null,
+    },
     participants: [
       {
         user: {
@@ -88,6 +108,28 @@ const meetingSchema = new mongoose.Schema(
         name: { type: String, required: true },
         email: { type: String, default: "" },
         role: { type: String, default: "" },
+        rsvpStatus: {
+          type: String,
+          enum: ["pending", "accepted", "declined", "tentative", "waitlisted"],
+          default: "pending",
+        },
+        rsvpReason: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
+    waitlist: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        name: { type: String, default: "" },
+        email: { type: String, default: "" },
+        joinedAt: { type: Date, default: Date.now },
+        note: { type: String, default: "" },
       },
     ],
     agendaItems: [
@@ -161,6 +203,16 @@ const meetingSchema = new mongoose.Schema(
     transcriptEncryptionVersion: {
       type: Number,
       default: null,
+    },
+    isRedacted: {
+      type: Boolean,
+      default: false,
+    },
+    encryptedOriginals: {
+      transcript: { type: String, default: "" },
+      summary: { type: String, default: "" },
+      aiNotes: { type: String, default: "" },
+      transcriptSegments: { type: String, default: "" },
     },
     summary: {
       type: String, // Human-readable MoM text

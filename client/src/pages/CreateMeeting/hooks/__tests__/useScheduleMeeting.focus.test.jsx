@@ -122,4 +122,45 @@ describe("useScheduleMeeting Focus Conflict & Audit Note (#2067)", () => {
       }),
     );
   });
+
+  it("blocks scheduling when a focus block has strict block policy", async () => {
+    const focusStart = new Date(2026, 7, 23, 10, 0, 0, 0);
+    const focusEnd = new Date(2026, 7, 23, 12, 0, 0, 0);
+    const focusBlock = {
+      _id: "fb_strict",
+      title: "Strict Deep Work",
+      startTime: focusStart.toISOString(),
+      endTime: focusEnd.toISOString(),
+      isRecurring: false,
+      policy: "block",
+      allowOverride: false,
+    };
+    focusTimeApi.getBlocks.mockResolvedValue([focusBlock]);
+
+    const { result } = renderHook(() => useScheduleMeeting(), { wrapper });
+
+    await waitFor(() => {
+      expect(focusTimeApi.getBlocks).toHaveBeenCalled();
+    });
+
+    act(() => {
+      result.current.setScheduleData((prev) => ({
+        ...prev,
+        title: "Forbidden Sync",
+        date: "2026-08-23",
+        time: "10:30",
+        duration: 60,
+      }));
+    });
+
+    await waitFor(() => {
+      expect(result.current.focusConflicts.length).toBeGreaterThan(0);
+    });
+
+    await act(async () => {
+      await result.current.handleScheduleSubmit({ preventDefault: () => {} });
+    });
+
+    expect(meetingApi.scheduleMeeting).not.toHaveBeenCalled();
+  });
 });

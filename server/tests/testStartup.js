@@ -81,4 +81,45 @@ try {
   assert.fail(`Queue operations threw an unexpected error: ${err.message}`);
 }
 
+// ---------------------------------------------------------------------------
+// Composed router graph (Issue #2575)
+//
+// Everything above imports individual services. Nothing imported
+// `routes/index.js`, which is what `server.js` actually loads — so five route
+// files reached `main` importing names their controllers do not export, and a
+// sixth reached for an ESM-only package through `createRequire`. Each one made
+// `node server.js` exit at import time with the API completely down, and none
+// of them were visible to a test that only touches services.
+//
+// Importing the composed router here is cheap (no listener, no database) and
+// turns "does the process boot?" into something CI answers on every run.
+// ---------------------------------------------------------------------------
+const routesModule = await import("../routes/index.js");
+const router = routesModule.default;
+
+assert.ok(router, "routes/index.js should export a router");
+assert.strictEqual(
+  typeof router,
+  "function",
+  "routes/index.js should export an Express router (a function)",
+);
+assert.ok(
+  Array.isArray(router.stack) && router.stack.length > 0,
+  "the composed router should have registered layers",
+);
+
+// A layer whose handler is `undefined` is what a bad named import produces
+// once Express stops throwing on it. Assert every mounted layer is callable.
+for (const layer of router.stack) {
+  assert.strictEqual(
+    typeof layer.handle,
+    "function",
+    `route layer ${layer.name || "(anonymous)"} has a non-function handler`,
+  );
+}
+
+console.log(
+  `✅ Composed router graph imported cleanly (${router.stack.length} layers, all handlers callable).`,
+);
+
 console.log("\n🎉 ALL STARTUP OPTIMIZATION VERIFICATIONS PASSED!\n");

@@ -39,6 +39,7 @@ import {
   Users,
   CheckSquare,
   Activity,
+  Shield,
   ShieldAlert,
   ShieldCheck,
   Moon,
@@ -76,6 +77,7 @@ import {
   Smile,
   Lightbulb,
   Presentation,
+  Brain,
 } from "lucide-react";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -563,6 +565,11 @@ const Navbar = () => {
             icon: AlertTriangle,
           },
           {
+            label: t("navbar.riskRegister", "Risk Register"),
+            href: "/risks",
+            icon: ShieldAlert,
+          },
+          {
             label: t("navbar.bookmarks"),
             href: "/bookmarks",
             icon: Bookmark,
@@ -598,6 +605,24 @@ const Navbar = () => {
             permission: { resource: "reports", action: "view" },
           },
           {
+            label: t("navbar.meetingROI", "Meeting ROI Dashboard"),
+            href: "/meeting-roi-dashboard",
+            icon: TrendingUp,
+            permission: { resource: "reports", action: "view" },
+          },
+          {
+            label: t("navbar.aiMeetingNotes", "AI Meeting Notes"),
+            href: "/ai-notes-dashboard",
+            icon: Sparkles,
+            permission: { resource: "reports", action: "view" },
+          },
+          {
+            label: t("navbar.meetingInsights"),
+            href: "/meeting-insights",
+            icon: Brain,
+            permission: { resource: "reports", action: "view" },
+          },
+          {
             label: t("navbar.meetingHealth"),
             href: "/meeting-health",
             icon: HeartPulse,
@@ -605,9 +630,9 @@ const Navbar = () => {
           },
           {
             label: t("navbar.speakingTime"),
-            href: "/speaking-time-trends",
+            href: "/speaking-time",
             icon: Mic,
-            permission: { resource: "reports", action: "view" },
+            permission: { resource: "organizations", action: "view" },
           },
           {
             label: t("navbar.speakingCompare"),
@@ -760,6 +785,12 @@ const Navbar = () => {
             href: "/recap-schedule",
             icon: Clock,
             permission: { resource: "settings", action: "view" },
+          },
+          {
+            label: t("navbar.dlpCompliance", "DLP Compliance"),
+            href: "/compliance/dlp",
+            icon: Shield,
+            permission: { resource: "admin_panel", action: "view" },
           },
           {
             label: t("navbar.adminPanel"),

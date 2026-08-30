@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import Meeting from "../models/meetingModel.js";
 import Membership from "../models/membershipModel.js";
+import MeetingRsvp from "../models/meetingRsvpModel.js";
 import {
   ValidationError,
   NotFoundError,
@@ -284,14 +285,49 @@ export const resolveInvite = async (code, user) => {
 
   const target = resolveJoinTarget(meeting);
 
+  const userId = user?._id || user?.id;
+  let userRsvp = null;
+  if (userId) {
+    userRsvp = await MeetingRsvp.findOne({
+      meetingId: meeting._id,
+      userId,
+    }).lean();
+  }
+
+  // Calculate capacity and waitlist counts
+  const maxParticipants = meeting.maxParticipants || null;
+  const acceptedCount = (meeting.participants || []).filter(
+    (p) => p.rsvpStatus === "accepted",
+  ).length;
+  const waitlistCount = (meeting.waitlist || []).length;
+  const isFull = maxParticipants !== null && acceptedCount >= maxParticipants;
+  const isWaitlisted =
+    userRsvp?.status === "waitlisted" ||
+    (meeting.waitlist || []).some(
+      (w) => w.user?.toString() === userId?.toString(),
+    );
+
   return {
     meeting: {
       id: meeting._id.toString(),
       title: meeting.title,
+      description: meeting.description || "",
       date: meeting.date,
       time: meeting.time,
       status: meeting.status,
       recordingType: meeting.recordingType,
+      maxParticipants,
+      acceptedCount,
+      waitlistCount,
+      isFull,
+      userRsvp: userRsvp
+        ? {
+            status: userRsvp.status,
+            declineReason: userRsvp.declineReason,
+            availabilityNote: userRsvp.availabilityNote,
+          }
+        : null,
+      isWaitlisted,
       organization: meeting.organization
         ? {
             id: meeting.organization._id?.toString(),

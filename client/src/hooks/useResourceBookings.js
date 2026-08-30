@@ -37,6 +37,20 @@ export const useResourceBookings = () => {
     }
   }, []);
 
+  const deleteResource = useCallback(async (resourceId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await resourceBookingApi.deletePhysicalResource(resourceId);
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const fetchAvailableResources = useCallback(
     async (organizationId, startTime, endTime, type = null) => {
       setLoading(true);
@@ -58,6 +72,35 @@ export const useResourceBookings = () => {
     },
     [],
   );
+
+  const fetchResourceBookings = useCallback(async (resourceId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await resourceBookingApi.getResourceBookings(resourceId);
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchOrganizationBookings = useCallback(async (organizationId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data =
+        await resourceBookingApi.getOrganizationBookings(organizationId);
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const bookResource = useCallback(async (organizationId, bookingData) => {
     setLoading(true);
@@ -109,7 +152,10 @@ export const useResourceBookings = () => {
     error,
     fetchPhysicalResources,
     createResource,
+    deleteResource,
     fetchAvailableResources,
+    fetchResourceBookings,
+    fetchOrganizationBookings,
     bookResource,
     cancelResourceBooking,
     fetchMeetingBookings,

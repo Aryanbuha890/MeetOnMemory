@@ -29,6 +29,122 @@ export const breakoutRoomService = {
     return await room.save();
   },
 
+  randomAssignParticipants: async ({
+    meetingId,
+    roomIds,
+    participantIds,
+    socketIo,
+  }) => {
+    if (!meetingId) {
+      throw new Error("Meeting ID is required");
+    }
+    if (!roomIds || roomIds.length === 0) {
+      throw new Error("No active breakout rooms provisioned.");
+    }
+
+    let participants = participantIds || [];
+
+    // If no participantIds passed, extract from Meeting model
+    if (!participants || participants.length === 0) {
+      const meeting = await Meeting.findById(meetingId);
+      if (meeting?.participants?.length) {
+        participants = meeting.participants.map(
+          (p) => p.user || p._id || p.id || p.name || p,
+        );
+      }
+    }
+
+    if (participants.length === 0) {
+      return { success: true, message: "Roster empty.", allocations: [] };
+    }
+
+    // Shuffle Roster via Fisher-Yates array displacement algorithm
+    const shuffled = [...participants];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // Distribute participants round-robin into breakout buckets
+    const allocations = roomIds.map((id) => ({
+      roomId: id.toString(),
+      members: [],
+    }));
+    shuffled.forEach((participant, idx) => {
+      allocations[idx % roomIds.length].members.push(participant);
+    });
+
+    // Write distribution maps down to persistent store concurrently
+    await Promise.all(
+      allocations.map((alloc) =>
+        BreakoutRoom.findByIdAndUpdate(
+          alloc.roomId,
+          { participants: alloc.members },
+          { new: true },
+        ),
+      ),
+    );
+
+    // Notify clients of group shuffles via Socket.IO if available
+    if (socketIo) {
+      socketIo
+        .to(`meeting:${meetingId}`)
+        .emit("breakout_shuffled", { allocations });
+      socketIo.to(meetingId.toString()).emit("breakout:shuffled", {
+        roomId: meetingId,
+        allocations,
+      });
+    }
+
+    return { success: true, allocations };
+  },
+
+  broadcastToAllRooms: async ({ meetingId, message, sender, socketIo }) => {
+    if (!meetingId || !message) {
+      throw new Error("Meeting ID and message are required.");
+    }
+
+    const payload = {
+      sender: sender || "Host Notification",
+      message,
+      timestamp: Date.now(),
+      roomId: meetingId,
+    };
+
+    if (socketIo) {
+      // Broadcast over the meeting channels and breakout namespaces
+      socketIo
+        .to(`meeting:${meetingId}`)
+        .emit("breakout_broadcast_received", payload);
+      socketIo.to(meetingId.toString()).emit("breakout:broadcast", payload);
+    }
+
+    return { success: true, message: "Broadcast dispatched to all rooms." };
+  },
+
+  closeAllBreakoutRooms: async ({ meetingId, socketIo }) => {
+    if (!meetingId) {
+      throw new Error("Meeting ID is required.");
+    }
+
+    await BreakoutRoom.updateMany(
+      { meetingId },
+      { status: "closed", participants: [], closeTime: new Date() },
+    );
+
+    if (socketIo) {
+      socketIo.to(`meeting:${meetingId}`).emit("breakout_closed_all");
+      socketIo
+        .to(meetingId.toString())
+        .emit("breakout:closed-all", { roomId: meetingId });
+    }
+
+    return {
+      success: true,
+      message: "All breakout rooms closed and participants recalled.",
+    };
+  },
+
   startRoom: async (roomId) => {
     const room = await BreakoutRoom.findById(roomId);
     if (!room) {
@@ -73,9 +189,6 @@ export const breakoutRoomService = {
 
     await room.save();
 
-    // Merge into main meeting aiNotes (using a basic append approach)
-    // Note: Depends on how MeetingModel handles aiNotes.
-    // Assuming meeting has a notes field or similar. Let's append to description or a new field if aiNotes doesn't exist.
     const meeting = await Meeting.findById(room.meetingId);
     if (meeting) {
       const roomNote = `\n\n--- Breakout Room: ${room.name} Summary ---\n${room.summary || "No summary available."}\n`;
@@ -107,3 +220,5 @@ export const breakoutRoomService = {
     return await room.save();
   },
 };
+
+export default breakoutRoomService;

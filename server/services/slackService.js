@@ -348,3 +348,36 @@ eventBus.on("mom.generated", async (meeting) => {
     );
   }
 });
+
+export const sendSlackNotification = async (orgId, text) => {
+  try {
+    const org = await Organization.findById(orgId)
+      .select("+slackIntegration.botToken slackIntegration.channelId")
+      .lean();
+
+    const slack = org?.slackIntegration;
+    const decryptedToken = decryptToken(slack?.botToken);
+    if (!decryptedToken || !slack?.channelId) {
+      return;
+    }
+
+    const blocks = [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: text,
+        },
+      },
+    ];
+
+    await postBlockMessage(
+      decryptedToken,
+      slack.channelId,
+      blocks,
+      text.slice(0, 150),
+    );
+  } catch (err) {
+    console.error(`[Slack Notification] Failed to post message:`, err.message);
+  }
+};

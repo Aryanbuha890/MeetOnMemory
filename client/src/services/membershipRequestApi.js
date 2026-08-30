@@ -42,4 +42,10 @@ export const membershipRequestApi = {
       requestIds,
       reviewNotes,
     }),
+
+  // Add comment to membership request (#2483)
+  addComment: (requestId, text) =>
+    apiClient.post(`/api/membership-requests/${requestId}/comments`, {
+      text,
+    }),
 };

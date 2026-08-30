@@ -67,15 +67,25 @@ const ConflictWarning = ({
                     Focus time
                   </div>
                   <ul className="ml-6 list-disc space-y-1">
-                    {focusConflicts.map((conflict, index) => (
-                      <li
-                        key={`${conflict._id || conflict.id || "focus"}-${index}`}
-                      >
-                        {conflict.title || "Protected focus time"} —{" "}
-                        {formatTime(conflict.conflictStart)}–
-                        {formatTime(conflict.conflictEnd)}
-                      </li>
-                    ))}
+                    {focusConflicts.map((conflict, index) => {
+                      const isStrict =
+                        conflict.policy === "block" ||
+                        conflict.allowOverride === false;
+                      return (
+                        <li
+                          key={`${conflict._id || conflict.id || "focus"}-${index}`}
+                        >
+                          {conflict.title || "Protected focus time"} —{" "}
+                          {formatTime(conflict.conflictStart)}–
+                          {formatTime(conflict.conflictEnd)}
+                          {isStrict && (
+                            <span className="ml-2 inline-flex items-center rounded-sm bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-950/60 dark:text-red-300">
+                              Strict (No Override)
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
