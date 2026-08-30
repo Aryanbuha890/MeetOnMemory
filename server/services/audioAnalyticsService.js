@@ -3,6 +3,7 @@ import Meeting from "../models/meetingModel.js";
 import User from "../models/userModel.js";
 import Transcript from "../models/transcriptModel.js";
 import { groupByPeriod } from "../utils/periodBucket.js";
+import mongoose from "mongoose";
 
 /**
  * Audio Analytics Service
@@ -281,10 +282,13 @@ export const analyzeMeeting = async (meetingId) => {
       // Find or create speaker analytics
       const speakerId = segment.speaker.toString();
       if (!speakerMap.has(speakerId)) {
-        const user = await User.findById(speakerId);
+        let user = null;
+        if (mongoose.isValidObjectId(speakerId)) {
+          user = await User.findById(speakerId);
+        }
         speakerMap.set(speakerId, {
           userId: speakerId,
-          name: user?.name || segment.speakerName || "Unknown",
+          name: user?.name || segment.speakerName || "Guest",
           email: user?.email || "",
           totalTime: 0,
           interventionCount: 0,
