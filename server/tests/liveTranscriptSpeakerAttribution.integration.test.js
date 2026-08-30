@@ -28,7 +28,7 @@ jest.unstable_mockModule("../models/speakerMappingModel.js", () => ({
   },
 }));
 
-let currentTranscriptDoc = null;
+let _currentTranscriptDoc = null;
 
 jest.unstable_mockModule("../models/transcriptModel.js", () => {
   class MockTranscript {
@@ -40,7 +40,7 @@ jest.unstable_mockModule("../models/transcriptModel.js", () => {
       this.segments = data.segments || [];
       this.fullText = data.fullText || "";
       this.duration = data.duration || 0;
-      currentTranscriptDoc = this;
+      _currentTranscriptDoc = this;
     }
     save() {
       mockSave();
@@ -104,7 +104,7 @@ describe("Live Transcript Chunk Speaker Attribution Integration Tests (#2665)", 
 
   beforeEach(() => {
     jest.clearAllMocks();
-    currentTranscriptDoc = null;
+    _currentTranscriptDoc = null;
 
     mockFindById.mockResolvedValue(mockMeeting);
     mockSpeakerMappingFindOne.mockResolvedValue(null);
@@ -163,13 +163,15 @@ describe("Live Transcript Chunk Speaker Attribution Integration Tests (#2665)", 
       mappedName: "Dr. Evelyn Vance",
     };
 
-    mockSpeakerMappingFindOne.mockImplementation(({ meeting, $or }) => {
-      const isMatch = $or?.some((cond) => cond.originalLabel === "spk_1");
-      if (isMatch) {
-        return Promise.resolve(mappedDoc);
-      }
-      return Promise.resolve(null);
-    });
+    mockSpeakerMappingFindOne.mockImplementation(
+      ({ meeting: _meeting, $or }) => {
+        const isMatch = $or?.some((cond) => cond.originalLabel === "spk_1");
+        if (isMatch) {
+          return Promise.resolve(mappedDoc);
+        }
+        return Promise.resolve(null);
+      },
+    );
 
     const res = await request(app)
       .post(`/api/meetings/${mockMeetingId}/transcript/captions`)

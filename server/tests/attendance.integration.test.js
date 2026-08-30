@@ -94,7 +94,7 @@ describe("Meeting Attendance Server Integration Tests (#2666)", () => {
       };
 
       mockCheckIn.mockImplementation((req, res) => {
-        const { email, name } = req.body;
+        const { email, name: _name } = req.body;
         if (!email) {
           return res
             .status(400)
