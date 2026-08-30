@@ -20,39 +20,12 @@ export default defineConfig({
       },
     }),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
       registerType: "autoUpdate",
-      workbox: {
+      injectManifest: {
         maximumFileSizeToCacheInBytes: 10000000,
-        runtimeCaching: [
-          {
-            urlPattern: /\/api\/policies(\?.*)?$/,
-            handler: "StaleWhileRevalidate",
-            options: {
-              cacheName: "policy-data-cache",
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 86400 * 30, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /\/api\/policies\/download\//,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "policy-pdf-cache",
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 86400 * 30, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-        ],
       },
     }),
   ],

@@ -1,53 +1,75 @@
 /**
- * sw.js
- * Foundational Service Worker for Offline-First PWA capabilities.
- * Intercepts requests and serves from cache when offline.
+ * client/src/sw.js
+ * Consolidated Service Worker source for VitePWA (injectManifest strategy).
+ * Handles offline capabilities, background sync, Workbox precaching, dynamic caching, and Web Push notifications.
  */
 
-const CACHE_NAME = "meet-on-memory-v1";
-const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/favicon.ico"];
+import { clientsClaim } from "workbox-core";
+import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
+import { registerRoute } from "workbox-routing";
+import {
+  StaleWhileRevalidate,
+  CacheFirst,
+  NetworkOnly,
+  NetworkFirst,
+} from "workbox-strategies";
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log("[Service Worker] Caching static assets");
-      return cache.addAll(STATIC_ASSETS);
-    }),
-  );
-  self.skipWaiting();
-});
+self.skipWaiting();
+clientsClaim();
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name)),
-      );
-    }),
-  );
-  self.clients.claim();
-});
+// Precache static assets injected by VitePWA
+cleanupOutdatedCaches();
+precacheAndRoute(self.__WB_MANIFEST || []);
 
-self.addEventListener("fetch", (event) => {
-  // Simple network-first, fallback to cache strategy for API calls and static assets
-  if (event.request.method === "GET") {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const resClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, resClone);
-          });
-          return response;
-        })
-        .catch(() => caches.match(event.request)),
-    );
-  }
-});
+// ---------------------------------------------------------------------------
+// Custom Workbox Routing
+// ---------------------------------------------------------------------------
 
-// Background sync for offline mutations
+// 1. Ensure authenticated API requests are NEVER cached
+registerRoute(
+  ({ url, request }) =>
+    url.pathname.startsWith("/api/") || request.headers.has("Authorization"),
+  new NetworkOnly(),
+);
+
+// 2. Policy data cache
+registerRoute(
+  /\/api\/policies(\?.*)?$/,
+  new StaleWhileRevalidate({
+    cacheName: "policy-data-cache",
+  }),
+);
+
+// 3. Policy PDF cache
+registerRoute(
+  /\/api\/policies\/download\//,
+  new CacheFirst({
+    cacheName: "policy-pdf-cache",
+  }),
+);
+
+// 4. Runtime caching for static resources (scripts, styles, images)
+registerRoute(
+  ({ request }) =>
+    request.destination === "script" ||
+    request.destination === "style" ||
+    request.destination === "image",
+  new StaleWhileRevalidate({
+    cacheName: "static-resources",
+  }),
+);
+
+// 5. Offline support for navigation requests
+registerRoute(
+  ({ request }) => request.mode === "navigate",
+  new NetworkFirst({
+    cacheName: "pages-cache",
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Background Sync for Offline Mutations
+// ---------------------------------------------------------------------------
 const DB_NAME = "offline-mutations-db";
 const STORE_NAME = "mutations";
 const DB_VERSION = 1;
@@ -208,7 +230,9 @@ self.addEventListener("message", (event) => {
   }
 });
 
-// Web Push Notification Events
+// ---------------------------------------------------------------------------
+// Web Push Notifications
+// ---------------------------------------------------------------------------
 self.addEventListener("push", (event) => {
   let data = {};
   if (event.data) {
@@ -251,41 +275,3 @@ self.addEventListener("notificationclick", (event) => {
       }),
   );
 });
-
-/* eslint-disable no-undef */
-importScripts(
-  "https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js",
-);
-
-if (workbox) {
-  // Ensure authenticated API requests are NEVER cached.
-  workbox.routing.registerRoute(({ url, request }) => {
-    // Exclude requests that include Authorization headers or target protected API endpoints
-    if (
-      url.pathname.startsWith("/api/") ||
-      request.headers.has("Authorization")
-    ) {
-      return true;
-    }
-    return false;
-  }, new workbox.strategies.NetworkOnly());
-
-  // Continue runtime caching for static assets.
-  workbox.routing.registerRoute(
-    ({ request }) =>
-      request.destination === "script" ||
-      request.destination === "style" ||
-      request.destination === "image",
-    new workbox.strategies.StaleWhileRevalidate({
-      cacheName: "static-resources",
-    }),
-  );
-
-  // Preserve offline support for public resources
-  workbox.routing.registerRoute(
-    ({ request }) => request.mode === "navigate",
-    new workbox.strategies.NetworkFirst({
-      cacheName: "pages-cache",
-    }),
-  );
-}

@@ -1,4 +1,12 @@
-// client/src/services/offlineQueue.js
+/**
+ * client/src/services/offlineQueue.js
+ * Offline Mutation Queue service using IndexedDB.
+ *
+ * OFFLINE QUEUE LIMITATION:
+ * Queued offline mutations must contain serializable, JSON-compatible request payloads.
+ * Binary/file/blob payloads (e.g., FormData containing Files/Blobs) are not supported
+ * by this offline mutation queue.
+ */
 
 const DB_NAME = "offline-mutations-db";
 const STORE_NAME = "mutations";
@@ -88,7 +96,7 @@ export const subscribeQueue = (callback) => {
 
 /**
  * Queue a mutation to IndexedDB.
- * @param {Object} mutation { url, method, headers, body, idempotencyKey }
+ * @param {Object} mutation { url, method, headers, body, idempotencyKey } Note: body must contain JSON-serializable data; binary/blob payloads are not supported.
  */
 export const queueMutation = async (mutation) => {
   const db = await openDB();
