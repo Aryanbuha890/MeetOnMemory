@@ -29,7 +29,11 @@ const AnalyticsDashboard = ({ teamId }) => {
       setRecentMeetings(meetingsData.data.meetings || []);
     } catch (err) {
       console.error("Failed to fetch analytics:", err);
-      setError(err.response?.data?.message || err.message || "Failed to fetch analytics");
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch analytics",
+      );
     } finally {
       setIsLoading(false);
     }

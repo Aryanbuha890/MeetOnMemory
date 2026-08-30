@@ -82,7 +82,9 @@ describe("AnalyticsDashboard Component", () => {
     });
 
     expect(screen.getByText("API failure")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Try Again" }),
+    ).toBeInTheDocument();
   });
 
   it("handles retry action on error", async () => {
@@ -124,6 +126,8 @@ describe("AnalyticsDashboard Component", () => {
       expect(screen.getByText("No meetings analyzed yet.")).toBeInTheDocument();
     });
 
-    expect(screen.queryByText("Error Loading Analytics")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Error Loading Analytics"),
+    ).not.toBeInTheDocument();
   });
 });
