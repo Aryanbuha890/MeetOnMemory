@@ -30,6 +30,7 @@ import CarryForwardConfig from "../components/meetings/CarryForwardConfig";
 import RoleRotationConfig from "../components/meetings/RoleRotationConfig";
 import DuplicateDetectionPanel from "../components/meeting-details/DuplicateDetectionPanel";
 import MeetingTimeline from "../components/meeting-details/MeetingTimeline";
+import MeetingPresentationTimeline from "../components/MeetingPresentationTimeline";
 import RecapStoryViewer from "../components/summaries/RecapStoryViewer";
 import ReactionSummaryCard from "../components/meeting-details/ReactionSummaryCard";
 import { useUser } from "@clerk/clerk-react";
@@ -599,6 +600,7 @@ const MeetingDetails = () => {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2">
+              <MeetingPresentationTimeline meetingId={meeting._id} />
               <MeetingTranscript meeting={meeting} />
             </div>
             <div className="xl:col-span-1 h-[600px]">
