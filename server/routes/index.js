@@ -148,7 +148,7 @@ router.use("/api/ai", aiRoutes);
 router.use("/api/policies", policyRoutes);
 router.use("/api/analytics", analyticsRoutes);
 router.use("/api/action-item-analytics", actionItemAnalyticsRoutes);
-router.use("/api/standup", standupRoutes);
+router.use(["/api/standups", "/api/standup"], standupRoutes);
 router.use("/api/gemini", geminiRoutes);
 router.use("/api/notes", notesRoutes);
 router.use("/api/favorites", favoriteRoutes);
@@ -300,8 +300,6 @@ import dataRetentionRoutes from "./dataRetentionRoutes.js";
 router.use("/api/data-retention", dataRetentionRoutes);
 import weeklyInsightRoutes from "./weeklyInsightRoutes.js";
 router.use("/api/weekly-insights", weeklyInsightRoutes);
-import standupReportRoutes from "./standupReportRoutes.js";
-router.use("/api/standups", standupReportRoutes);
 import meetingRiskRoutes from "./meetingRiskRoutes.js";
 router.use("/api/meeting-risks", meetingRiskRoutes);
 
