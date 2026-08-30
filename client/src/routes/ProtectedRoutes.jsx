@@ -620,7 +620,7 @@ const ProtectedRoutes = (
     <Route
       path="/delegations"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="tasks" action="view">
           <MyDelegations />
         </ProtectedRoute>
       }
@@ -628,7 +628,7 @@ const ProtectedRoutes = (
     <Route
       path="/focus-time"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <FocusTime />
         </ProtectedRoute>
       }
@@ -636,7 +636,7 @@ const ProtectedRoutes = (
     <Route
       path="/escalations"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="tasks" action="view">
           <EscalationDashboard />
         </ProtectedRoute>
       }
@@ -726,7 +726,7 @@ const ProtectedRoutes = (
     <Route
       path="/assistant"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="ai_search" action="search">
           <AiAssistant />
         </ProtectedRoute>
       }
@@ -812,7 +812,7 @@ const ProtectedRoutes = (
     <Route
       path="/profile"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="settings" action="self_view">
           <Profile />
         </ProtectedRoute>
       }
@@ -948,7 +948,7 @@ const ProtectedRoutes = (
     <Route
       path="/settings"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="settings" action="self_view">
           <Settings />
         </ProtectedRoute>
       }
@@ -964,7 +964,7 @@ const ProtectedRoutes = (
     <Route
       path="/bookmarks"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="bookmarks" action="view">
           <Bookmarks />
         </ProtectedRoute>
       }
@@ -972,7 +972,7 @@ const ProtectedRoutes = (
     <Route
       path="/activities"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <ActivityFeed />
         </ProtectedRoute>
       }
@@ -980,7 +980,7 @@ const ProtectedRoutes = (
     <Route
       path="/tags"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="meetings" action="view">
           <TagBrowser />
         </ProtectedRoute>
       }
@@ -1137,7 +1137,7 @@ const ProtectedRoutes = (
     <Route
       path="/leaderboard"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <Leaderboard />
         </ProtectedRoute>
       }
@@ -1145,7 +1145,7 @@ const ProtectedRoutes = (
     <Route
       path="/badges"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <Badges />
         </ProtectedRoute>
       }
@@ -1186,7 +1186,7 @@ const ProtectedRoutes = (
     <Route
       path="/rsvps"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="calendar" action="view">
           <RsvpInbox />
         </ProtectedRoute>
       }
@@ -1194,7 +1194,7 @@ const ProtectedRoutes = (
     <Route
       path="/catch-up"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="meetings" action="view">
           <AbsenteeCatchUpInbox />
         </ProtectedRoute>
       }
@@ -1216,7 +1216,7 @@ const ProtectedRoutes = (
     <Route
       path="/async-meetings"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="meetings" action="view">
           <AsyncMeetingsDashboard />
         </ProtectedRoute>
       }

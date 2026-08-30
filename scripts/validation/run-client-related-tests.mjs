@@ -31,7 +31,7 @@ const ROOT_CLIENT_MAP = {
   "client/src/services/sessionCardApi.js":
     "client/src/pages/__tests__/SessionGallery.test.jsx",
   "client/src/routes/ProtectedRoutes.jsx":
-    "client/src/pages/__tests__/SessionGallery.test.jsx",
+    "client/src/routes/__tests__/ProtectedRoutes.test.jsx",
   "client/src/components/Navbar.jsx":
     "client/src/pages/__tests__/SessionGallery.test.jsx",
   "client/src/pages/CreateMeeting.jsx":
