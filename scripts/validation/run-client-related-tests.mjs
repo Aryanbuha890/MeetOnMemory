@@ -35,7 +35,7 @@ const ROOT_CLIENT_MAP = {
   "client/src/services/sessionCardApi.js":
     "client/src/pages/__tests__/SessionGallery.test.jsx",
   "client/src/routes/ProtectedRoutes.jsx":
-    "client/src/pages/__tests__/SessionGallery.test.jsx",
+    "client/src/routes/__tests__/ProtectedRoutes.test.jsx",
   "client/src/components/Navbar.jsx":
     "client/src/pages/__tests__/SessionGallery.test.jsx",
   "client/src/pages/CreateMeeting.jsx":
@@ -74,6 +74,10 @@ const ROOT_CLIENT_MAP = {
   "client/src/services/guestAccessApi.js":
     "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
  feature/persist-danger-zone-audit
+ feature/persist-danger-zone-audit
+
+ feature/fix-clerk-offline-sync
+ main
 
   "client/src/config/backendConfig.js":
     "client/src/config/__tests__/backendConfig.test.js",

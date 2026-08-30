@@ -102,12 +102,19 @@ const vitestOwnedSources = new Set([
   "server/middleware/authMiddleware.js",
   "server/controllers/keyMomentController.js",
   "server/routes/keyMomentRoutes.js",
+feature/persist-danger-zone-audit
  feature/persist-danger-zone-audit
   "server/routes/auditRoutes.js",
   "server/routes/index.js",
 ]);
 const VITEST_SOURCE_TEST_MAP = {
   "server/routes/auditRoutes.js": "server/__tests__/audit.test.js",
+
+ feature/fix-clerk-offline-sync
+  "server/routes/index.js",
+]);
+const VITEST_SOURCE_TEST_MAP = {
+ main
   "server/routes/index.js":
     "server/tests/breakoutRoomController.vitest.test.js",
 
