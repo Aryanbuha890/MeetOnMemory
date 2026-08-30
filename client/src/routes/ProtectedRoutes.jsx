@@ -73,6 +73,7 @@ const DlpComplianceConsole = lazy(
   () => import("../pages/DlpComplianceConsole.jsx"),
 );
 const Settings = lazy(() => import("../pages/Settings.jsx"));
+const RiskRegister = lazy(() => import("../pages/RiskRegister.jsx"));
 const MembershipRequests = lazy(
   () => import("../pages/MembershipRequests.jsx"),
 );
@@ -185,7 +186,7 @@ const IntegrationMarketplaceHub = lazy(
   () => import("../pages/IntegrationMarketplaceHub.jsx"),
 );
 const SentimentTrends = lazy(() => import("../pages/SentimentTrends.jsx"));
-const RiskRegister = lazy(() => import("../pages/RiskRegister.jsx"));
+
 const AsyncMeetingsDashboard = lazy(
   () => import("../pages/AsyncMeetingsDashboard.jsx"),
 );
@@ -198,7 +199,7 @@ const ProtectedRoutes = (
     <Route
       path="/risks"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <RouteErrorBoundary>
             <RiskRegister />
           </RouteErrorBoundary>
@@ -208,7 +209,7 @@ const ProtectedRoutes = (
     <Route
       path="/risk-register"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <RouteErrorBoundary>
             <RiskRegister />
           </RouteErrorBoundary>
@@ -218,7 +219,7 @@ const ProtectedRoutes = (
     <Route
       path="/risks/matrix"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <RouteErrorBoundary>
             <RiskRegister />
           </RouteErrorBoundary>
