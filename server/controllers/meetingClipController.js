@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import MeetingClip from "../models/meetingClipModel.js";
 import Meeting from "../models/meetingModel.js";
 import clipExtractionService from "../services/clipExtractionService.js";
+import meetingClipExportService from "../services/meetingClipExportService.js";
 import { canAccessMeetingDoc } from "../middleware/rbac.js";
 
 const CLIP_MODERATOR_ROLES = new Set(["owner", "admin", "moderator"]);
@@ -212,5 +213,94 @@ export const addAnnotation = async (req, res) => {
   } catch (error) {
     console.error("Error adding annotation to clip:", error);
     clipError(res, 500, "Failed to add annotation");
+  }
+};
+
+/**
+ * Trim a meeting clip file boundaries
+ */
+export const trimClipController = async (req, res) => {
+  try {
+    const ctx = await loadAccessibleClip(req, res);
+    if (!ctx) return;
+
+    if (!canManageClip(ctx.clip, req.user)) {
+      return clipError(
+        res,
+        403,
+        "Forbidden: You don't have permission to modify this clip",
+      );
+    }
+
+    const { startTime, endTime } = req.body;
+    if (startTime === undefined || endTime === undefined) {
+      return clipError(res, 400, "startTime and endTime are required");
+    }
+
+    const io = req.app.get("io");
+    const updatedClip = await meetingClipExportService.trimClip(
+      ctx.clip._id,
+      startTime,
+      endTime,
+      io,
+    );
+
+    res.status(200).json({ success: true, data: updatedClip });
+  } catch (error) {
+    console.error("Error trimming meeting clip:", error);
+    clipError(res, 500, error.message || "Failed to trim meeting clip");
+  }
+};
+
+/**
+ * Merge multiple meeting clips
+ */
+export const mergeClipsController = async (req, res) => {
+  try {
+    const { clipIds, title } = req.body;
+    if (!clipIds || clipIds.length === 0) {
+      return clipError(res, 400, "clipIds are required for merge");
+    }
+
+    // Verify access to all source clips
+    const clips = await MeetingClip.find({ _id: { $in: clipIds } });
+    if (clips.length !== clipIds.length) {
+      return clipError(res, 400, "Some clips were not found");
+    }
+
+    // Validate merge scope: all clips must belong to the same meeting
+    const firstMeetingId = clips[0].meeting.toString();
+    const sameMeeting = clips.every(
+      (c) => c.meeting.toString() === firstMeetingId,
+    );
+    if (!sameMeeting) {
+      return clipError(res, 400, "Cannot merge clips from different meetings");
+    }
+
+    // RBAC verification for all clips
+    for (const clip of clips) {
+      const meeting = await Meeting.findById(clip.meeting);
+      if (!meeting || !canAccessMeetingDoc(meeting, req.user)) {
+        return clipError(
+          res,
+          403,
+          "Forbidden: You don't have access to all selected clips",
+        );
+      }
+    }
+
+    const io = req.app.get("io");
+    const userId = req.user._id;
+    const compilation = await meetingClipExportService.mergeClips(
+      clipIds,
+      title,
+      userId,
+      io,
+    );
+
+    res.status(200).json({ success: true, data: compilation });
+  } catch (error) {
+    console.error("Error merging meeting clips:", error);
+    clipError(res, 500, error.message || "Failed to merge meeting clips");
   }
 };
