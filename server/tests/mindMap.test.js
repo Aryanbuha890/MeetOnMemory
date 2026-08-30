@@ -1,11 +1,30 @@
+/** @jest-environment node */
+import { jest } from "@jest/globals";
+
+// Mock jsdom virtually to bypass Jest CJS/ESM loader issues with EXODUS bytes
+jest.unstable_mockModule(
+  "jsdom",
+  () => {
+    return {
+      JSDOM: class JSDOM {
+        constructor() {
+          this.window = {};
+        }
+      },
+    };
+  },
+  { virtual: true },
+);
+
 import request from "supertest";
-import { app } from "../server.js";
 import mongoose from "mongoose";
 import MindMap from "../models/mindMapModel.js";
 import ActionItem from "../models/actionItemModel.js";
 import User from "../models/userModel.js";
 import Meeting from "../models/meetingModel.js";
 import { createClerkTestToken, authHeader } from "./helpers/clerkTestAuth.js";
+
+const { app } = await import("../server.js");
 
 let testMeeting;
 let testUser;

@@ -368,10 +368,14 @@ const MindMapBoard = ({ meetingId, participants }) => {
 
             <div className="space-y-3.5">
               <div className="space-y-1">
-                <label className="text-xs text-slate-400 font-semibold">
+                <label
+                  htmlFor="assignee-select"
+                  className="text-xs text-slate-400 font-semibold"
+                >
                   Assignee
                 </label>
                 <select
+                  id="assignee-select"
                   value={assigneeId}
                   onChange={(e) => setAssigneeId(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
@@ -386,22 +390,30 @@ const MindMapBoard = ({ meetingId, participants }) => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs text-slate-400 font-semibold">
+                <label
+                  htmlFor="due-date-input"
+                  className="text-xs text-slate-400 font-semibold"
+                >
                   Due Date
                 </label>
                 <input
+                  id="due-date-input"
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                />
+                ></input>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs text-slate-400 font-semibold">
+                <label
+                  htmlFor="priority-select"
+                  className="text-xs text-slate-400 font-semibold"
+                >
                   Priority
                 </label>
                 <select
+                  id="priority-select"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
