@@ -94,6 +94,7 @@ import asyncMeetingRoutes from "./asyncMeetingRoutes.js";
 
 import calendarRoutes from "./calendarRoutes.js";
 import assistantRoutes from "./assistantRoutes.js";
+import voiceSearchRoutes from "./voiceSearchRoutes.js";
 import savedFilterRoutes from "./savedFilterRoutes.js";
 import meetingChecklistRoutes from "./meetingChecklistRoutes.js";
 import speakingTimeRoutes from "./speakingTimeRoutes.js";
@@ -163,6 +164,7 @@ router.use("/api/policy-compliance", policyComplianceRoutes);
 router.use("/api/sessions", sessionRoutes);
 router.use("/api/recording-sessions", recordingSessionRoutes);
 router.use("/api/assistant", assistantRoutes);
+router.use("/api/voice-search", voiceSearchRoutes);
 router.use("/api/transcripts", transcriptRoutes);
 router.use("/api/meetings/:meetingId/chapters", transcriptChapterRoutes);
 router.use("/api/meetings/:meetingId/attendance", meetingAttendanceRoutes);
