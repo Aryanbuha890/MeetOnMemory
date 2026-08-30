@@ -35,9 +35,8 @@ jest.unstable_mockModule("../middleware/userAuth.js", () => ({
   sanitizeAuthRequestForLog: jest.fn(),
 }));
 
-const { default: attendanceRoutes } = await import(
-  "../routes/meetingAttendanceRoutes.js"
-);
+const { default: attendanceRoutes } =
+  await import("../routes/meetingAttendanceRoutes.js");
 
 describe("Meeting Attendance Server Integration Tests (#2666)", () => {
   let app;
