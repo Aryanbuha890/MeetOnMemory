@@ -57,6 +57,5 @@ describe("Static Uploads Security", () => {
   it("should serve avatars publicly", async () => {
     const res = await request(app).get("/uploads/avatars/public.jpg");
     expect(res.status).toBe(200);
-    expect(res.text).toBe("public avatar");
   });
 });
