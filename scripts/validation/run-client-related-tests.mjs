@@ -52,7 +52,6 @@ const ROOT_CLIENT_MAP = {
     "client/src/pages/__tests__/AiMeetingNotesDashboard.test.jsx",
   "client/src/services/aiMeetingNoteApi.js":
     "client/src/pages/__tests__/AiMeetingNotesDashboard.test.jsx",
- feature/breakout-rooms-facilitation-2453
   "client/src/components/meeting-room/BreakoutRoomPanel.jsx":
     "client/src/components/meeting-room/__tests__/BreakoutRoomPanel.test.jsx",
   "client/src/components/meetings/BreakoutRoomPanel.jsx":
@@ -70,7 +69,8 @@ const ROOT_CLIENT_MAP = {
     "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
   "client/src/services/guestAccessApi.js":
     "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
- main
+  "client/src/config/backendConfig.js":
+    "client/src/config/__tests__/backendConfig.test.js",
 };
 
 const directTests = [
