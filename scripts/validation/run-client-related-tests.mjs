@@ -73,6 +73,11 @@ const ROOT_CLIENT_MAP = {
     "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
   "client/src/services/guestAccessApi.js":
     "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
+ feature/persist-danger-zone-audit
+
+  "client/src/config/backendConfig.js":
+    "client/src/config/__tests__/backendConfig.test.js",
+ main
 };
 
 const directTests = [
