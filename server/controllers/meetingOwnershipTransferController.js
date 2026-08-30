@@ -3,7 +3,12 @@ import Meeting from "../models/meetingModel.js";
 import User from "../models/userModel.js";
 import AuditLog from "../models/auditLogModel.js";
 import { createNotification } from "../services/notificationService.js";
-import { errorResponse, successResponse } from "../utils/responseHandler.js";
+import { sendSuccess, sendError } from "../utils/responseHandler.js";
+
+const errorResponse = (res, statusCode, message, errorData) =>
+  sendError(res, statusCode, message, errorData);
+const successResponse = (res, statusCode, message, data) =>
+  sendSuccess(res, data, message, statusCode);
 
 // 1. Initiate Transfer
 export const initiateTransfer = async (req, res) => {
