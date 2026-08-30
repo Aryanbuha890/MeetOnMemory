@@ -22,6 +22,10 @@ const ROOT_CLIENT_MAP = {
     "client/src/components/__tests__/OfflineBanner.test.jsx",
   "client/src/components/OfflineQueueInspector.jsx":
     "client/src/components/__tests__/OfflineQueueInspector.test.jsx",
+  "client/src/components/organization/DangerZone.jsx":
+    "client/src/components/organization/__tests__/DangerZone.test.jsx",
+  "client/src/services/organizationApi.js":
+    "client/src/components/organization/__tests__/DangerZone.test.jsx",
   "client/src/pages/AcceptInvite.jsx":
     "client/src/pages/__tests__/AcceptInvite.test.jsx",
   "client/src/services/index.js":
@@ -52,7 +56,6 @@ const ROOT_CLIENT_MAP = {
     "client/src/pages/__tests__/AiMeetingNotesDashboard.test.jsx",
   "client/src/services/aiMeetingNoteApi.js":
     "client/src/pages/__tests__/AiMeetingNotesDashboard.test.jsx",
- feature/breakout-rooms-facilitation-2453
   "client/src/components/meeting-room/BreakoutRoomPanel.jsx":
     "client/src/components/meeting-room/__tests__/BreakoutRoomPanel.test.jsx",
   "client/src/components/meetings/BreakoutRoomPanel.jsx":
@@ -70,7 +73,6 @@ const ROOT_CLIENT_MAP = {
     "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
   "client/src/services/guestAccessApi.js":
     "client/src/components/meetings/__tests__/GuestAccessManager.test.jsx",
- main
 };
 
 const directTests = [

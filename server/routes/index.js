@@ -1,5 +1,6 @@
 import express from "express";
 import authRoutes from "./authRoutes.js";
+import auditRoutes from "./auditRoutes.js";
 import organizationRoutes from "./organizationRoutes.js";
 import membershipRoutes from "./membershipRoutes.js";
 import membershipRequestRoutes from "./membershipRequestRoutes.js";
@@ -123,6 +124,7 @@ const router = express.Router();
 // ALL PROTECTED ROUTES (CSRF Enforced globally in express.js)
 // ==========================================
 router.use("/api/auth", authRoutes);
+router.use("/api", auditRoutes);
 router.use(["/api/organization", "/api/organizations"], organizationRoutes);
 router.use(["/api/membership", "/api/memberships"], membershipRoutes);
 router.use(
