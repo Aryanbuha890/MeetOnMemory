@@ -5,6 +5,7 @@ import meetingRiskApi from "../services/meetingRiskApi";
 import { organizationApi } from "../services/organizationApi";
 import AppContent from "../context/AppContent";
 import Navbar from "../components/Navbar.jsx";
+import { useRBAC } from "../hooks/useRBAC.js";
 import {
   AlertTriangle,
   ShieldAlert,
@@ -41,8 +42,8 @@ const RiskRegister = () => {
   const [usersList, setUsersList] = useState([]);
   const [mitigationLoadingSubmit, setMitigationLoadingSubmit] = useState(false);
 
-  const isAdminOrOwner =
-    userData?.role === "admin" || userData?.role === "owner";
+  const { hasPermission } = useRBAC();
+  const isAdminOrOwner = hasPermission("admin_panel", "manage");
 
   const effectiveOrgId =
     orgId ||
@@ -132,25 +133,6 @@ const RiskRegister = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to export risks");
-    }
-  };
-
-  const handleMitigate = async (riskId) => {
-    try {
-      const response = await meetingRiskApi.updateRiskStatus(riskId, {
-        status: "Mitigated",
-      });
-      if (response.success) {
-        toast.success("Risk marked as mitigated");
-        setRisks((prev) =>
-          prev.map((r) =>
-            r._id === riskId ? { ...r, status: "Mitigated" } : r,
-          ),
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to update risk status");
     }
   };
 

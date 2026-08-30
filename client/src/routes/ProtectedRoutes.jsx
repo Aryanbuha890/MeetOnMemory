@@ -186,7 +186,7 @@ const IntegrationMarketplaceHub = lazy(
   () => import("../pages/IntegrationMarketplaceHub.jsx"),
 );
 const SentimentTrends = lazy(() => import("../pages/SentimentTrends.jsx"));
-const RiskRegister = lazy(() => import("../pages/RiskRegister.jsx"));
+
 const AsyncMeetingsDashboard = lazy(
   () => import("../pages/AsyncMeetingsDashboard.jsx"),
 );
@@ -199,7 +199,7 @@ const ProtectedRoutes = (
     <Route
       path="/risks"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <RouteErrorBoundary>
             <RiskRegister />
           </RouteErrorBoundary>
@@ -209,7 +209,7 @@ const ProtectedRoutes = (
     <Route
       path="/risk-register"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <RouteErrorBoundary>
             <RiskRegister />
           </RouteErrorBoundary>
@@ -219,7 +219,7 @@ const ProtectedRoutes = (
     <Route
       path="/risks/matrix"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute resource="reports" action="view">
           <RouteErrorBoundary>
             <RiskRegister />
           </RouteErrorBoundary>
@@ -1218,16 +1218,6 @@ const ProtectedRoutes = (
       element={
         <ProtectedRoute>
           <AsyncMeetingsDashboard />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="/risks"
-      element={
-        <ProtectedRoute resource="reports" action="view">
-          <RouteErrorBoundary section="Risk Register">
-            <RiskRegister />
-          </RouteErrorBoundary>
         </ProtectedRoute>
       }
     />
