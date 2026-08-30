@@ -1,10 +1,6 @@
 import * as agendaVoteService from "../services/agendaVoteService.js";
 import { resolveAccessibleMeeting } from "../utils/resolveAccessibleMeeting.js";
-import {
-  ValidationError,
-  ForbiddenError,
-  AppError,
-} from "../utils/errors.js";
+import { ValidationError, ForbiddenError, AppError } from "../utils/errors.js";
 
 /**
  * Helper to determine if a user is a host or admin for a meeting.

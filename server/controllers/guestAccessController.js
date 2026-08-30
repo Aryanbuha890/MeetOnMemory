@@ -166,7 +166,9 @@ class GuestAccessController {
 
       if (!isHost && !isAdmin && !isOrgMember) {
         return next(
-          new ForbiddenError("Unauthorized to export feedback for this meeting"),
+          new ForbiddenError(
+            "Unauthorized to export feedback for this meeting",
+          ),
         );
       }
 

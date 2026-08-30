@@ -74,7 +74,9 @@ describe("Membership Request Comment Endpoint Authorization (#2664)", () => {
     });
 
     it("2b. Authenticated user missing required team_members permission is rejected with 403", () => {
-      const req = { user: { _id: USER_ID, organization: ORG_A, role: "invalid_role" } };
+      const req = {
+        user: { _id: USER_ID, organization: ORG_A, role: "invalid_role" },
+      };
       const res = makeRes();
       const next = vi.fn();
 
@@ -86,7 +88,9 @@ describe("Membership Request Comment Endpoint Authorization (#2664)", () => {
     });
 
     it("Passes middleware when user has organization and valid team_members:view role", () => {
-      const req = { user: { _id: USER_ID, organization: ORG_A, role: "member" } };
+      const req = {
+        user: { _id: USER_ID, organization: ORG_A, role: "member" },
+      };
       const resOrg = makeRes();
       const nextOrg = vi.fn();
       requireOrgMembership(req, resOrg, nextOrg);
@@ -157,9 +161,14 @@ describe("Membership Request Comment Endpoint Authorization (#2664)", () => {
   describe("Controller Flow & Response Shape Preservation", () => {
     it("5. addCommentToMembershipRequest controller returns 201 with created comment for authorized caller", async () => {
       const requestId = new mongoose.Types.ObjectId().toString();
-      const mockRequest = { _id: requestId, comments: [{ text: "Test comment" }] };
+      const mockRequest = {
+        _id: requestId,
+        comments: [{ text: "Test comment" }],
+      };
 
-      vi.spyOn(MembershipRequestService, "addComment").mockResolvedValue(mockRequest);
+      vi.spyOn(MembershipRequestService, "addComment").mockResolvedValue(
+        mockRequest,
+      );
 
       const req = {
         params: { id: requestId },
