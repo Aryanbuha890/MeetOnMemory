@@ -67,6 +67,7 @@ const DecisionDependencyMatrix = lazy(
 const DecisionLog = lazy(() => import("../pages/DecisionLog.jsx"));
 const PolicyCompliance = lazy(() => import("../pages/PolicyCompliance.jsx"));
 const Settings = lazy(() => import("../pages/Settings.jsx"));
+const RiskRegister = lazy(() => import("../pages/RiskRegister.jsx"));
 const MembershipRequests = lazy(
   () => import("../pages/MembershipRequests.jsx"),
 );
@@ -1004,6 +1005,16 @@ const ProtectedRoutes = (
       element={
         <ProtectedRoute>
           <AsyncMeetingsDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/risks"
+      element={
+        <ProtectedRoute resource="reports" action="view">
+          <RouteErrorBoundary section="Risk Register">
+            <RiskRegister />
+          </RouteErrorBoundary>
         </ProtectedRoute>
       }
     />

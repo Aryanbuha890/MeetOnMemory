@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 import meetingRiskApi from "../services/meetingRiskApi";
+import { useRBAC } from "../hooks/useRBAC.js";
 import {
   AlertTriangle,
   ShieldAlert,
@@ -10,11 +11,15 @@ import {
   Clock,
   Search,
   Filter,
+  CheckCircle,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
 const RiskRegister = () => {
   const { orgId } = useAuth();
+  const { hasPermission } = useRBAC();
+  const canMitigate = hasPermission("admin_panel", "manage");
+
   const [risks, setRisks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -57,6 +62,25 @@ const RiskRegister = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to export risks");
+    }
+  };
+
+  const handleMitigate = async (riskId) => {
+    try {
+      const response = await meetingRiskApi.updateRiskStatus(riskId, {
+        status: "Mitigated",
+      });
+      if (response.success) {
+        toast.success("Risk marked as mitigated");
+        setRisks((prev) =>
+          prev.map((r) =>
+            r._id === riskId ? { ...r, status: "Mitigated" } : r,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update risk status");
     }
   };
 
@@ -318,13 +342,18 @@ const RiskRegister = () => {
                       <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                         Status
                       </th>
+                      {canMitigate && (
+                        <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right">
+                          Actions
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
                     {loading ? (
                       <tr>
                         <td
-                          colSpan="5"
+                          colSpan={canMitigate ? "6" : "5"}
                           className="p-8 text-center text-slate-500"
                         >
                           Loading risks...
@@ -333,7 +362,7 @@ const RiskRegister = () => {
                     ) : filteredRisks.length === 0 ? (
                       <tr>
                         <td
-                          colSpan="5"
+                          colSpan={canMitigate ? "6" : "5"}
                           className="p-12 text-center text-slate-500 flex flex-col items-center"
                         >
                           <ShieldAlert size={32} className="mb-3 opacity-20" />
@@ -401,6 +430,20 @@ const RiskRegister = () => {
                               {risk.status}
                             </span>
                           </td>
+                          {canMitigate && (
+                            <td className="p-4 text-right">
+                              {risk.status !== "Mitigated" &&
+                                risk.status !== "Closed" && (
+                                  <button
+                                    onClick={() => handleMitigate(risk._id)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-md text-xs font-medium transition-colors border border-emerald-500/20"
+                                  >
+                                    <CheckCircle size={14} />
+                                    Mitigate
+                                  </button>
+                                )}
+                            </td>
+                          )}
                         </tr>
                       ))
                     )}

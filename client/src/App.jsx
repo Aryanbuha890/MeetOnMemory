@@ -15,7 +15,6 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import AppContent from "./context/AppContent.js";
 
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
-const RiskRegister = lazy(() => import("./pages/RiskRegister.jsx"));
 
 const App = () => {
   const location = useLocation();
@@ -62,14 +61,6 @@ const App = () => {
             <Routes>
               {PublicRoutes}
               {ProtectedRoutes}
-              <Route
-                path="/risks"
-                element={
-                  <ProtectedRoute>
-                    <RiskRegister />
-                  </ProtectedRoute>
-                }
-              />
               {/* ✅ Fallback route — send unknown routes to NotFound */}
               <Route path="*" element={<NotFound />} />
             </Routes>
