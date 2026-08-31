@@ -18,3 +18,17 @@ export const triggerManualGeneration = async (orgId) => {
   );
   return response.data;
 };
+
+export const shareWeeklyInsight = async (orgId, insightId) => {
+  const response = await apiClient.post(
+    `/api/weekly-insights/${orgId}/insights/${insightId}/share`,
+  );
+  return response.data;
+};
+
+export const emailWeeklyInsight = async (orgId, insightId) => {
+  const response = await apiClient.post(
+    `/api/weekly-insights/${orgId}/insights/${insightId}/email`,
+  );
+  return response.data;
+};

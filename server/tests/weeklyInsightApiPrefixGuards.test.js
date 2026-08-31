@@ -20,6 +20,20 @@ jest.unstable_mockModule("../services/weeklyInsightService.js", () => ({
   generateInsight: (...args) => mockGenerateInsight(...args),
 }));
 
+const mockMembershipFind = jest.fn();
+jest.unstable_mockModule("../models/membershipModel.js", () => ({
+  default: {
+    find: (...args) => mockMembershipFind(...args),
+  },
+}));
+
+const mockSendNotificationEmail = jest.fn();
+jest.unstable_mockModule("../services/EmailService.js", () => ({
+  default: {
+    sendNotificationEmail: (...args) => mockSendNotificationEmail(...args),
+  },
+}));
+
 const mockUser = {
   _id: new mongoose.Types.ObjectId().toString(),
   name: "Admin User",
@@ -139,6 +153,67 @@ describe("Weekly Insights Server API Route Prefix Guards Suite (#2620)", () => {
       const orgId = new mongoose.Types.ObjectId().toString();
       const res = await request(app)
         .post(`/weekly-insights/${orgId}/generate`)
+        .set("Authorization", "Bearer valid-token");
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 200 for POST /api/weekly-insights/:orgId/insights/:insightId/share", async () => {
+      const orgId = new mongoose.Types.ObjectId().toString();
+      const insightId = new mongoose.Types.ObjectId().toString();
+      const mockInsight = {
+        _id: insightId,
+        organization: orgId,
+        save: jest.fn().mockResolvedValue(true),
+      };
+      mockFindOne.mockResolvedValueOnce(mockInsight);
+
+      const res = await request(app)
+        .post(`/api/weekly-insights/${orgId}/insights/${insightId}/share`)
+        .set("Authorization", "Bearer valid-token");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.shareLink).toContain(insightId);
+    });
+
+    it("should return 404 for un-prefixed POST /weekly-insights/:orgId/insights/:insightId/share", async () => {
+      const orgId = new mongoose.Types.ObjectId().toString();
+      const insightId = new mongoose.Types.ObjectId().toString();
+      const res = await request(app)
+        .post(`/weekly-insights/${orgId}/insights/${insightId}/share`)
+        .set("Authorization", "Bearer valid-token");
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 200 for POST /api/weekly-insights/:orgId/insights/:insightId/email", async () => {
+      const orgId = new mongoose.Types.ObjectId().toString();
+      const insightId = new mongoose.Types.ObjectId().toString();
+      const mockInsight = {
+        _id: insightId,
+        organization: orgId,
+        startDate: new Date(),
+        save: jest.fn().mockResolvedValue(true),
+      };
+      mockFindOne.mockResolvedValueOnce(mockInsight);
+      mockMembershipFind.mockReturnValueOnce({
+        populate: jest.fn().mockResolvedValue([]),
+      });
+
+      const res = await request(app)
+        .post(`/api/weekly-insights/${orgId}/insights/${insightId}/email`)
+        .set("Authorization", "Bearer valid-token");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it("should return 404 for un-prefixed POST /weekly-insights/:orgId/insights/:insightId/email", async () => {
+      const orgId = new mongoose.Types.ObjectId().toString();
+      const insightId = new mongoose.Types.ObjectId().toString();
+      const res = await request(app)
+        .post(`/weekly-insights/${orgId}/insights/${insightId}/email`)
         .set("Authorization", "Bearer valid-token");
 
       expect(res.status).toBe(404);

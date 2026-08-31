@@ -3,6 +3,8 @@ import {
   getLatestInsight,
   getInsightHistory,
   triggerManualGeneration,
+  shareWeeklyInsight,
+  emailWeeklyInsight,
 } from "../services/weeklyInsightApi.js";
 import apiClient from "../services/apiClient.js";
 
@@ -50,6 +52,30 @@ describe("Weekly Insights API Prefix Suite (#2620)", () => {
 
     expect(apiClient.post).toHaveBeenCalledWith(
       "/api/weekly-insights/org-123/generate",
+    );
+    expect(result).toEqual(mockData);
+  });
+
+  it("should call shareWeeklyInsight with /api/weekly-insights/:orgId/insights/:insightId/share", async () => {
+    const mockData = { success: true, shareLink: "http://share-link" };
+    apiClient.post.mockResolvedValueOnce({ data: mockData });
+
+    const result = await shareWeeklyInsight("org-123", "ins-456");
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/weekly-insights/org-123/insights/ins-456/share",
+    );
+    expect(result).toEqual(mockData);
+  });
+
+  it("should call emailWeeklyInsight with /api/weekly-insights/:orgId/insights/:insightId/email", async () => {
+    const mockData = { success: true, message: "Emails sent" };
+    apiClient.post.mockResolvedValueOnce({ data: mockData });
+
+    const result = await emailWeeklyInsight("org-123", "ins-456");
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/weekly-insights/org-123/insights/ins-456/email",
     );
     expect(result).toEqual(mockData);
   });
