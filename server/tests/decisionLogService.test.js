@@ -26,12 +26,8 @@ jest.unstable_mockModule("../models/decisionModel.js", () => ({
   },
 }));
 
-const { default: decisionLogService } = await import(
-  "../services/decisionLogService.js"
-);
-const { default: DecisionLogEntry } = await import(
-  "../models/decisionLogEntryModel.js"
-);
+const { default: decisionLogService } =
+  await import("../services/decisionLogService.js");
 
 describe("DecisionLogService", () => {
   beforeEach(() => {
@@ -90,10 +86,9 @@ describe("DecisionLogService", () => {
       });
 
       expect(mockEntry.save).toHaveBeenCalled();
-      expect(mockDecisionFindByIdAndUpdate).toHaveBeenCalledWith(
-        decisionId,
-        { $set: { text: "New decision text", status: "resolved" } },
-      );
+      expect(mockDecisionFindByIdAndUpdate).toHaveBeenCalledWith(decisionId, {
+        $set: { text: "New decision text", status: "resolved" },
+      });
       expect(result).toEqual(mockEntry);
     });
   });

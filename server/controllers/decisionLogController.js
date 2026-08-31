@@ -105,7 +105,9 @@ export const deleteEntry = async (req, res) => {
   try {
     const { id } = req.params;
     await decisionLogService.deleteEntry(id);
-    res.status(200).json({ success: true, message: "Decision log entry deleted" });
+    res
+      .status(200)
+      .json({ success: true, message: "Decision log entry deleted" });
   } catch (error) {
     console.error("Error in deleteEntry:", error);
     res.status(500).json({ error: "Failed to delete decision log entry" });

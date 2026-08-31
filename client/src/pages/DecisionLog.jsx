@@ -24,15 +24,26 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Plus, Download, Edit3, Trash2, Calendar, FileText, CheckCircle2 } from "lucide-react";
+import {
+  Plus,
+  Download,
+  Edit3,
+  Trash2,
+  Calendar,
+  FileText,
+  CheckCircle2,
+} from "lucide-react";
 
 const OutcomeBadge = ({ outcome }) => {
   const colors = {
-    implemented: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+    implemented:
+      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
     reversed: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-    deferred: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+    deferred:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
     pending: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
-    superseded: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+    superseded:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
   };
   return (
     <span
@@ -126,7 +137,11 @@ const DecisionLog = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this decision log entry?")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this decision log entry?",
+      )
+    ) {
       return;
     }
     try {
@@ -148,7 +163,10 @@ const DecisionLog = () => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", `decision-log-${new Date().toISOString().split("T")[0]}.csv`);
+        link.setAttribute(
+          "download",
+          `decision-log-${new Date().toISOString().split("T")[0]}.csv`,
+        );
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -158,7 +176,10 @@ const DecisionLog = () => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", `decision-log-${new Date().toISOString().split("T")[0]}.json`);
+        link.setAttribute(
+          "download",
+          `decision-log-${new Date().toISOString().split("T")[0]}.json`,
+        );
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -212,9 +233,12 @@ const DecisionLog = () => {
         {/* Title and Filter Panel */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Decision Log</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Decision Log
+            </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Authoritative record of architecture, design, and strategic team decisions.
+              Authoritative record of architecture, design, and strategic team
+              decisions.
             </p>
           </div>
 
@@ -280,19 +304,50 @@ const DecisionLog = () => {
 
         {/* Timeline Chart */}
         <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm h-72">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Decision Timeline</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Decision Timeline
+          </h2>
           <ResponsiveContainer width="100%" height="90%">
             <BarChart data={timeline}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="#E5E7EB"
+              />
               <XAxis dataKey="monthYear" tickLine={false} />
               <YAxis tickLine={false} axisLine={false} />
               <Tooltip cursor={{ fill: "rgba(229, 231, 235, 0.2)" }} />
               <Legend />
-              <Bar dataKey="implemented" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="pending" stackId="a" fill="#9CA3AF" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="deferred" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="reversed" stackId="a" fill="#EF4444" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="superseded" stackId="a" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="implemented"
+                stackId="a"
+                fill="#10B981"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="pending"
+                stackId="a"
+                fill="#9CA3AF"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="deferred"
+                stackId="a"
+                fill="#F59E0B"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="reversed"
+                stackId="a"
+                fill="#EF4444"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="superseded"
+                stackId="a"
+                fill="#8B5CF6"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -325,13 +380,19 @@ const DecisionLog = () => {
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  <td
+                    colSpan="6"
+                    className="text-center py-12 text-gray-500 dark:text-gray-400"
+                  >
                     <LoaderSpinner />
                   </td>
                 </tr>
               ) : log.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  <td
+                    colSpan="6"
+                    className="text-center py-12 text-gray-500 dark:text-gray-400"
+                  >
                     No decisions recorded.
                   </td>
                 </tr>
@@ -340,7 +401,11 @@ const DecisionLog = () => {
                   <React.Fragment key={entry._id}>
                     <tr
                       className="hover:bg-gray-50 dark:hover:bg-gray-800/40 cursor-pointer transition"
-                      onClick={() => setExpandedId(expandedId === entry._id ? null : entry._id)}
+                      onClick={() =>
+                        setExpandedId(
+                          expandedId === entry._id ? null : entry._id,
+                        )
+                      }
                     >
                       <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white max-w-xs truncate">
                         {entry.decisionId?.text || "Unknown Decision"}
@@ -377,13 +442,22 @@ const DecisionLog = () => {
                                 setFormData({
                                   text: entry.decisionId?.text || "",
                                   outcome: entry.outcome || "pending",
-                                  meetingId: entry.meetingId?._id || entry.meetingId || "",
-                                  decidedBy: entry.decidedBy?._id || entry.decidedBy || "",
+                                  meetingId:
+                                    entry.meetingId?._id ||
+                                    entry.meetingId ||
+                                    "",
+                                  decidedBy:
+                                    entry.decidedBy?._id ||
+                                    entry.decidedBy ||
+                                    "",
                                   reviewDate: entry.reviewDate
-                                    ? new Date(entry.reviewDate).toISOString().split("T")[0]
+                                    ? new Date(entry.reviewDate)
+                                        .toISOString()
+                                        .split("T")[0]
                                     : "",
                                   tags: (entry.tags || []).join(", "),
-                                  impactAssessment: entry.impactAssessment || "",
+                                  impactAssessment:
+                                    entry.impactAssessment || "",
                                 });
                                 setIsModalOpen(true);
                               }}
@@ -420,7 +494,8 @@ const DecisionLog = () => {
                                   Impact Assessment
                                 </span>
                                 <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                                  {entry.impactAssessment || "No impact assessment provided."}
+                                  {entry.impactAssessment ||
+                                    "No impact assessment provided."}
                                 </p>
                               </div>
                               {entry.tags?.length > 0 && (
@@ -450,7 +525,10 @@ const DecisionLog = () => {
                                 <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                                   <Calendar className="w-4 h-4 mr-2 text-indigo-500" />
                                   <span>
-                                    Review Scheduled: {new Date(entry.reviewDate).toLocaleDateString()}
+                                    Review Scheduled:{" "}
+                                    {new Date(
+                                      entry.reviewDate,
+                                    ).toLocaleDateString()}
                                   </span>
                                 </div>
                               )}
@@ -479,7 +557,9 @@ const DecisionLog = () => {
                                     ))}
                                   </ul>
                                 ) : (
-                                  <p className="text-sm text-gray-400">No action items linked.</p>
+                                  <p className="text-sm text-gray-400">
+                                    No action items linked.
+                                  </p>
                                 )}
                               </div>
 
@@ -491,13 +571,22 @@ const DecisionLog = () => {
                                   <select
                                     className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-lg p-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     value={entry.outcome}
-                                    onChange={(e) => handleOutcomeChange(entry._id, e.target.value)}
+                                    onChange={(e) =>
+                                      handleOutcomeChange(
+                                        entry._id,
+                                        e.target.value,
+                                      )
+                                    }
                                   >
                                     <option value="pending">Pending</option>
-                                    <option value="implemented">Implemented</option>
+                                    <option value="implemented">
+                                      Implemented
+                                    </option>
                                     <option value="reversed">Reversed</option>
                                     <option value="deferred">Deferred</option>
-                                    <option value="superseded">Superseded</option>
+                                    <option value="superseded">
+                                      Superseded
+                                    </option>
                                   </select>
                                 </div>
                               )}
@@ -521,7 +610,9 @@ const DecisionLog = () => {
             >
               Previous
             </button>
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Page {page}</span>
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Page {page}
+            </span>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={log.length < 20}
@@ -551,7 +642,9 @@ const DecisionLog = () => {
                     className="w-full bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Enter details of the decision made..."
                     value={formData.text}
-                    onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, text: e.target.value })
+                    }
                   />
                 </div>
 
@@ -563,7 +656,9 @@ const DecisionLog = () => {
                     <select
                       className="w-full bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       value={formData.outcome}
-                      onChange={(e) => setFormData({ ...formData, outcome: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, outcome: e.target.value })
+                      }
                     >
                       <option value="pending">Pending</option>
                       <option value="implemented">Implemented</option>
@@ -581,7 +676,9 @@ const DecisionLog = () => {
                       type="date"
                       className="w-full bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       value={formData.reviewDate}
-                      onChange={(e) => setFormData({ ...formData, reviewDate: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, reviewDate: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -594,7 +691,9 @@ const DecisionLog = () => {
                     <select
                       className="w-full bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       value={formData.meetingId}
-                      onChange={(e) => setFormData({ ...formData, meetingId: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, meetingId: e.target.value })
+                      }
                     >
                       <option value="">Select Meeting...</option>
                       {meetings.map((m) => (
@@ -612,7 +711,9 @@ const DecisionLog = () => {
                     <select
                       className="w-full bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       value={formData.decidedBy}
-                      onChange={(e) => setFormData({ ...formData, decidedBy: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, decidedBy: e.target.value })
+                      }
                     >
                       <option value="">Select User...</option>
                       {members.map((mem) => {
@@ -636,7 +737,9 @@ const DecisionLog = () => {
                     className="w-full bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="e.g. core, architecture, security"
                     value={formData.tags}
-                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, tags: e.target.value })
+                    }
                   />
                 </div>
 
@@ -650,7 +753,10 @@ const DecisionLog = () => {
                     placeholder="Explain structural or timeline impacts of this decision..."
                     value={formData.impactAssessment}
                     onChange={(e) =>
-                      setFormData({ ...formData, impactAssessment: e.target.value })
+                      setFormData({
+                        ...formData,
+                        impactAssessment: e.target.value,
+                      })
                     }
                   />
                 </div>
