@@ -110,6 +110,13 @@ if (!process.env.JWT_SECRET) {
   );
 }
 
+if (process.env.NODE_ENV !== "test" && !process.env.TOKEN_ENCRYPTION_KEY) {
+  console.error(
+    "FATAL ERROR: TOKEN_ENCRYPTION_KEY environment variable is required but not set.",
+  );
+  process.exit(1);
+}
+
 // DATABASE & CACHE
 await connectDB();
 
