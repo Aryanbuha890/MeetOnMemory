@@ -43,6 +43,7 @@ const {
   submitGuestFeedback,
   createToken,
   revokeToken,
+  getMeetingTokens,
 } = await import("../controllers/guestAccessController.js");
 
 const Meeting = (await import("../models/meetingModel.js")).default;
@@ -328,6 +329,112 @@ describe("guestAccessController (#2454)", () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           message: "Token revoked",
+        }),
+      );
+    });
+  });
+
+  describe("getMeetingTokens", () => {
+    it("allows meeting host to list tokens", async () => {
+      req.params = { meetingId: mockMeetingId };
+      req.user = {
+        _id: mockUserId,
+        id: mockUserId,
+        organization: mockOrgId,
+        role: "member",
+      };
+
+      Meeting.findById.mockResolvedValue({
+        _id: mockMeetingId,
+        uploadedBy: mockUserId,
+        organization: mockOrgId,
+      });
+
+      const mockTokens = [{ _id: "t1", guestEmail: "a@b.com" }];
+      GuestAccessToken.find.mockReturnValue({
+        sort: vi.fn().mockResolvedValue(mockTokens),
+      });
+
+      await getMeetingTokens(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockTokens);
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("allows admin to list tokens even if not host", async () => {
+      req.params = { meetingId: mockMeetingId };
+      req.user = {
+        _id: "another-admin",
+        id: "another-admin",
+        organization: mockOrgId,
+        role: "admin",
+      };
+
+      Meeting.findById.mockResolvedValue({
+        _id: mockMeetingId,
+        uploadedBy: "some-host",
+        organization: mockOrgId,
+      });
+
+      const mockTokens = [{ _id: "t1", guestEmail: "a@b.com" }];
+      GuestAccessToken.find.mockReturnValue({
+        sort: vi.fn().mockResolvedValue(mockTokens),
+      });
+
+      await getMeetingTokens(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockTokens);
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("rejects non-host and non-admin from same org with 403", async () => {
+      req.params = { meetingId: mockMeetingId };
+      req.user = {
+        _id: "regular-member",
+        id: "regular-member",
+        organization: mockOrgId,
+        role: "member",
+      };
+
+      Meeting.findById.mockResolvedValue({
+        _id: mockMeetingId,
+        uploadedBy: "some-host",
+        organization: mockOrgId,
+      });
+
+      await getMeetingTokens(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: expect.stringContaining("Only authorized hosts or admins"),
+        }),
+      );
+    });
+
+    it("rejects callers from different organization (cross-org IDOR protection) with 403", async () => {
+      req.params = { meetingId: mockMeetingId };
+      req.user = {
+        _id: mockUserId,
+        id: mockUserId,
+        organization: "different-org-id",
+        role: "admin",
+      };
+
+      Meeting.findById.mockResolvedValue({
+        _id: mockMeetingId,
+        uploadedBy: "some-host",
+        organization: mockOrgId,
+      });
+
+      await getMeetingTokens(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: expect.stringContaining("Unauthorized to view guest tokens"),
         }),
       );
     });
