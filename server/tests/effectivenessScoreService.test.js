@@ -1,20 +1,16 @@
 import { jest } from "@jest/globals";
 
-const { default: effectivenessScoreService } = await import(
-  "../services/effectivenessScoreService.js"
-);
-const { default: EffectivenessScore } = await import(
-  "../models/effectivenessScoreModel.js"
-);
+const { default: effectivenessScoreService } =
+  await import("../services/effectivenessScoreService.js");
+const { default: EffectivenessScore } =
+  await import("../models/effectivenessScoreModel.js");
 const { default: MeetingGoal } = await import("../models/meetingGoalModel.js");
 const { default: ActionItem } = await import("../models/actionItemModel.js");
-const { default: MeetingFeedback } = await import(
-  "../models/meetingFeedbackModel.js"
-);
+const { default: MeetingFeedback } =
+  await import("../models/meetingFeedbackModel.js");
 const { default: Decision } = await import("../models/decisionModel.js");
-const { default: MeetingAnalytics } = await import(
-  "../models/MeetingAnalytics.js"
-);
+const { default: MeetingAnalytics } =
+  await import("../models/MeetingAnalytics.js");
 
 describe("Effectiveness Score Service", () => {
   beforeEach(() => {
@@ -36,7 +32,7 @@ describe("Effectiveness Score Service", () => {
           ],
         }); // Score: (2*1 + 1*0.5) / 4 = 2.5 / 4 = 62.5% -> 63
 
-      const findActionItemsSpy = jest
+      jest
         .spyOn(ActionItem, "find")
         .mockResolvedValue([
           { status: "completed" },
@@ -45,22 +41,20 @@ describe("Effectiveness Score Service", () => {
           { status: "pending" },
         ]); // Score: 3/4 = 75% -> 75
 
-      const findFeedbackSpy = jest
+      jest
         .spyOn(MeetingFeedback, "find")
         .mockResolvedValue([{ rating: 4 }, { rating: 5 }]); // Score: 4.5/5 = 90% -> 90
 
-      const findDecisionsSpy = jest
+      jest
         .spyOn(Decision, "find")
         .mockResolvedValue([{ status: "final" }, { status: "draft" }]); // Score: 1/2 = 50% -> 50
 
-      const findOneAnalyticsSpy = jest
-        .spyOn(MeetingAnalytics, "findOne")
-        .mockResolvedValue({
-          durationMetrics: {
-            scheduledDuration: 60,
-            actualDuration: 60,
-          },
-        }); // Score: 100% -> 100
+      jest.spyOn(MeetingAnalytics, "findOne").mockResolvedValue({
+        durationMetrics: {
+          scheduledDuration: 60,
+          actualDuration: 60,
+        },
+      }); // Score: 100% -> 100
 
       const findOneAndUpdateScoreSpy = jest
         .spyOn(EffectivenessScore, "findOneAndUpdate")
